@@ -4,14 +4,15 @@
 
 Você deve entregar um software capaz de:
 
-- 1. **Fazer pull de prompts** do LangSmith Prompt Hub contendo prompts de baixa qualidade
-- 1. **Refatorar e otimizar** esses prompts usando técnicas avançadas de Prompt Engineering
-- 1. **Fazer push dos prompts otimizados** de volta ao LangSmith
-- 1. **Avaliar a qualidade** através de métricas customizadas (F1-Score, Tone Score, Acceptance Criteria Score, User Story Format Score, Completeness Score)
-- 1. **Atingir pontuação mínima** de 0.9 (90%) em todas as métricas de avaliação
+- **Fazer pull de prompts** do LangSmith Prompt Hub contendo prompts de baixa qualidade
+- **Refatorar e otimizar** esses prompts usando técnicas avançadas de Prompt Engineering
+- **Fazer push dos prompts otimizados** de volta ao LangSmith
+- **Avaliar a qualidade** através de métricas customizadas (F1-Score, Tone Score, Acceptance Criteria Score, User Story Format Score, Completeness Score)
+- **Atingir pontuação mínima** de 0.9 (90%) em todas as métricas de avaliação
 
 ## Exemplo no CLI
 
+```
 # Executar o pull dos prompts ruins do LangSmith
 
 python src/pull_prompts.py
@@ -28,8 +29,10 @@ Prompt: bug_to_user_story_v1
 - Tone Score: 0.45
 - Acceptance Criteria Score: 0.52
 - User Story Format Score: 0.48
-- # Completeness Score: 0.50
-  Status: FALHOU - Métricas abaixo do mínimo de 0.9
+- Completeness Score: 0.50
+
+Status: FALHOU - Métricas abaixo do mínimo de 0.9
+
 
 # Após refatorar os prompts e fazer push
 
@@ -47,8 +50,10 @@ Prompt: bug_to_user_story_v2
 - Tone Score: 0.94
 - Acceptance Criteria Score: 0.96
 - User Story Format Score: 0.93
-- # Completeness Score: 0.95
-  Status: APROVADO ✓ - Todas as métricas atingiram o mínimo de 0.9
+- Completeness Score: 0.95
+
+Status: APROVADO ✓ - Todas as métricas atingiram o mínimo de 0.9
+```
 
 ## Tecnologias obrigatórias
 
@@ -172,6 +177,8 @@ pytest tests/test_prompts.py
 
 Faça um fork do repositório base: **[https://github.com/devfullcycle/mba-ia-pull-evaluation-prompt](https://github.com/devfullcycle/mba-ia-pull-evaluation-prompt)**
 
+```
+
 mba-ia-pull-evaluation-prompt/
 ├── .env.example                  # Template das variáveis de ambiente
 ├── requirements.txt              # Dependências Python
@@ -190,6 +197,8 @@ mba-ia-pull-evaluation-prompt/
 │   └── utils.py                  # Funções auxiliares
 └── tests/
     └── test_prompts.py           # Testes de validação
+
+```
 
 ## O que você vai criar
 
@@ -215,9 +224,11 @@ mba-ia-pull-evaluation-prompt/
 
 Crie e ative um ambiente virtual antes de instalar dependências:
 
+```
 python3 -m venv venv
 source venv/bin/activate  # No Windows: venv\Scriptsctivate
 pip install -r requirements.txt
+```
 
 ## Ordem de execução
 
@@ -243,19 +254,24 @@ python src/evaluate.py
   - Todo o código-fonte implementado
   - Arquivo `prompts/bug_to_user_story_v2.yml` 100% preenchido e funcional
   - Arquivo `README.md` atualizado com:
+
 2. **README.md deve conter:**
+
   **A) Seção "Técnicas Aplicadas (Fase 2)":**
   - Quais técnicas avançadas você escolheu para refatorar os prompts
   - Justificativa de por que escolheu cada técnica
   - Exemplos práticos de como aplicou cada técnica
+
    **B) Seção "Resultados Finais"**
   - Link público do seu dashboard do LangSmith mostrando as avaliações
   - Screenshots das avaliações com as notas mínimas de 0.9 atingidas
   - Tabela comparativa: prompts ruins (v1) vs prompts otimizados (v2)
+
    **C) Seção "Como Executar"**
   - Instruções claras e detalhadas de como executar o projeto
   - Pré-requisitos e dependências
   - Comandos para cada fase do projeto
+  
    **D) Evidências no LangSmith**
   - Link público (ou screenshots) do dashboard do LangSmith
   - Devem estar visíveis:
