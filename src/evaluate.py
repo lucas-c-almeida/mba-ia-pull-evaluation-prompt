@@ -291,7 +291,7 @@ def main():
         return 1
 
     client = Client()
-    project_name = os.getenv("LANGCHAIN_PROJECT", "prompt-optimization-challenge-resolved")
+    project_name = os.getenv("LANGSMITH_PROJECT", "prompt-optimization-challenge-resolved")
 
     jsonl_path = "datasets/bug_to_user_story.jsonl"
 
