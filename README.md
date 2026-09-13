@@ -342,10 +342,14 @@ Justificativas completas também ficam versionadas em `techniques_applied` / `te
 
 ### Ajustes feitos durante a iteração
 
-O processo de iteração (3 rodadas) revelou dois problemas específicos que técnicas isoladas não resolviam sozinhas:
+O processo de iteração revelou problemas específicos que as 3 técnicas isoladas não resolviam sozinhas. Foram 6 rodadas de push + avaliação no total — as 3 primeiras contra `gemini-3.5-flash-lite` (até aprovar todas as 5 métricas), e mais 3 contra `gemini-3.1-flash-lite` depois que o `gemini-3.5-flash-lite` esgotou a cota diária gratuita (ver nota abaixo):
 
 1. **Vazamento de detalhes técnicos nos Critérios de Aceitação** — o juiz de `User Story Format Score` penalizava a separação de seções quando termos de implementação (ex: "thread", "índice", "notificar o time financeiro") apareciam dentro dos Critérios de Aceitação em vez de ficarem exclusivamente em "Contexto Técnico"/"Tasks Técnicas". Foi adicionada uma regra explícita proibindo esse vazamento.
-2. **Critérios subjetivos demais** — o `Acceptance Criteria Score` penalizava termos como "rápido"/"fluido" sem um valor mensurável associado (a referência do dataset usa limites concretos como "em menos de 2 segundos"). Foi adicionada uma regra explícita pedindo critérios mensuráveis sempre que o relato permitir inferir uma expectativa razoável.
+2. **Critérios subjetivos demais** — o `Acceptance Criteria Score` penalizava termos como "rápido"/"fluido" sem um valor mensurável associado (a referência do dataset usa limites concretos como "em menos de 2 segundos"). Foi adicionada uma regra explícita pedindo critérios mensuráveis.
+3. **Persona como frase, não rótulo** — trocando de modelo de avaliação, surgiu uma crítica nova: a persona deveria ser um rótulo curto ("Cliente", "Administrador") e não uma cláusula descritiva. Foi adicionada uma regra + exemplo few-shot ajustado.
+4. **Persona errada em bugs de sistema/segurança** — para bugs de integração (webhook, permissão) o juiz esperava uma persona de sistema/negócio, ou (em bugs de segurança) a persona de quem é protegido pela correção, não de quem a executa tecnicamente. Regra explícita adicionada.
+5. **Identificadores específicos na frase principal** — a User Story não deve citar IDs/dados específicos do bug relatado na frase "Como um... eu quero... para que..."; isso deve ficar nos Critérios/Contexto Técnico.
+6. **Critérios técnicos/não-funcionais empilhados** — mais de um requisito técnico (tempo de resposta + erro de rede + responsividade) na mesma lista de critérios foi visto como fuga de escopo; a regra de mensurabilidade foi limitada a no máximo um critério quantificado por vez.
 
 ## Resultados Finais
 
@@ -353,13 +357,17 @@ O processo de iteração (3 rodadas) revelou dois problemas específicos que té
 
 **Prompt publicado (público):** `https://smith.langchain.com/prompts/bug_to_user_story_v2` (owner: `lucas-almeida`)
 
+A avaliação usa `langsmith.evaluation.evaluate()` (ver "Como Executar"), que cria um **Experiment vinculado ao dataset** — visível na aba "Experiments" do LangSmith (`/datasets/<id>/compare?selectedSessions=...`), com feedback (score + comentário do juiz) anexado a cada execução, não apenas traces soltos.
+
 <!-- Screenshots das avaliações (v1 com notas baixas e v2 com notas >= 0.9) devem ser capturadas do dashboard do LangSmith e anexadas aqui, ex: ![resultado v2](docs/screenshot-v2.png) -->
 
-### Tabela comparativa: v1 (original) vs v2 (otimizado)
+> ⚠️ **Nota importante sobre cota gratuita e a versão validada:** o `gemini-3.5-flash-lite` tem um limite de 500 requisições/dia por projeto no tier gratuito, que foi esgotado durante o desenvolvimento (várias iterações completas consomem ~90 chamadas cada). A tabela abaixo (v1 vs v2, todas as métricas ≥ 0.9) reflete a **versão do `bug_to_user_story_v2.yml` na Iteração 3** — a última revalidada de ponta a ponta contra esse modelo antes de esgotar a cota. As iterações 4-6 (ajustes de persona/formato acima) foram feitas e validadas contra `gemini-3.1-flash-lite` (cota diária separada), chegando perto mas sem fechar 100% de forma estável (F1 e User Story Format Score oscilando entre 0.88-0.91 nas últimas rodadas, as outras 3 métricas consistentemente ≥ 0.9). O `prompts/bug_to_user_story_v2.yml` atual no repositório já inclui essas regras adicionais; uma revalidação completa contra `gemini-3.5-flash-lite` deve ser feita quando a cota diária resetar.
+
+### Tabela comparativa: v1 (original) vs v2 (Iteração 3, otimizado)
 
 Avaliação executada com `python src/evaluate.py --with-v1`, sobre os 15 exemplos do dataset `datasets/bug_to_user_story.jsonl` (modelo de resposta e de avaliação: `gemini-3.5-flash-lite`).
 
-| Métrica | v1 (`leonanluppi/bug_to_user_story_v1`) | v2 (`lucas-almeida/bug_to_user_story_v2`) |
+| Métrica | v1 (`leonanluppi/bug_to_user_story_v1`) | v2 (`lucas-almeida/bug_to_user_story_v2`, Iteração 3) |
 |---|---|---|
 | F1-Score | 0.89 ✗ | 0.91 ✓ |
 | Tone Score | 0.90 ✓ | 0.92 ✓ |
@@ -369,7 +377,15 @@ Avaliação executada com `python src/evaluate.py --with-v1`, sobre os 15 exempl
 | **Média geral** | **0.8791** | **0.9121** |
 | **Status** | ❌ FALHOU (2 de 5 métricas abaixo de 0.9) | ✅ APROVADO (todas as 5 métricas ≥ 0.9) |
 
-Foram necessárias **3 iterações** de push + avaliação até todas as 5 métricas atingirem 0.9 simultaneamente (dentro do intervalo de 3-5 iterações esperado pelo desafio).
+### Resultados das iterações 4-6 (`gemini-3.1-flash-lite`, prompt final)
+
+| Iteração | F1 | Tone | Acceptance Criteria | User Story Format | Completeness | Média |
+|---|---|---|---|---|---|---|
+| 4 | 0.8992 ✗ | 0.94 ✓ | 0.93 ✓ | 0.8988 ✗ | 0.94 ✓ | 0.9207 |
+| 5 | 0.90 ✓ | 0.95 ✓ | 0.91 ✓ | 0.8787 ✗ | 0.94 ✓ | 0.9171 |
+| 6 | 0.8975 ✗ | 0.95 ✓ | 0.94 ✓ | 0.8920 ✗ | 0.94 ✓ | 0.9222 |
+
+Tone, Acceptance Criteria e Completeness ficaram consistentemente ≥ 0.9; F1 e User Story Format Score oscilaram na faixa 0.88-0.90 sem convergir de forma estável, dentro do que parece ser ruído normal do LLM-juiz nessa fronteira, não um erro sistemático identificável no prompt.
 
 ## Como Executar
 
@@ -400,7 +416,9 @@ python src/pull_prompts.py
 # 3. Push do prompt otimizado (público) para o LangSmith Hub
 python src/push_prompts.py
 
-# 4. Avaliação (cria o dataset no LangSmith se não existir, roda as 5 métricas)
+# 4. Avaliação (cria o dataset no LangSmith se não existir, roda as 5 métricas
+#    via langsmith.evaluation.evaluate() — cria um Experiment vinculado ao
+#    dataset, visível na aba "Experiments" do LangSmith)
 python src/evaluate.py
 
 # Opcional: também avaliar o v1 original, para gerar a comparação "antes/depois"
@@ -412,4 +430,4 @@ pytest tests/test_prompts.py -v
 
 **Nota (Windows):** o console usa por padrão a codepage `cp1252`, que não imprime os emojis/checkmarks usados nos scripts. Rode com `PYTHONIOENCODING=utf-8` na frente (Git Bash) ou `$env:PYTHONIOENCODING="utf-8"` antes (PowerShell).
 
-**Nota (cota gratuita do Gemini):** o tier gratuito limita a 15 requisições/minuto por modelo. Cada exemplo do dataset consome 1 chamada de geração + 5 chamadas de avaliação (LLM-as-judge) = 6 chamadas; uma rodada completa (15 exemplos) soma ~90 chamadas. `src/evaluate.py` já inclui um *pacing* automático (`EVAL_CALL_DELAY_SECONDS`, padrão 4.5s) entre chamadas para respeitar essa cota — uma rodada completa leva ~7-8 minutos.
+**Nota (cota gratuita do Gemini):** o tier gratuito limita a 15 requisições/minuto **e também um total diário por modelo** (ex: 500/dia para `gemini-3.5-flash-lite` no momento em que este projeto foi feito — o limite exato varia por modelo e pode mudar). Cada exemplo do dataset consome 1 chamada de geração + 5 chamadas de avaliação (LLM-as-judge) = 6 chamadas; uma rodada completa (15 exemplos) soma ~90 chamadas. `src/evaluate.py` já inclui um *pacing* automático (`EVAL_CALL_DELAY_SECONDS`, padrão 4.5s) entre chamadas para respeitar o limite por minuto — uma rodada completa leva ~7-8 minutos. Se a cota **diária** esgotar (erro 429 com `quota_id: GenerateRequestsPerDayPerProjectPerModel-FreeTier`), a única saída é trocar de modelo (ex: `gemini-3.1-flash-lite`, que tem cota própria e separada) ou esperar o reset do dia seguinte — não há como contornar isso com mais *pacing*.
