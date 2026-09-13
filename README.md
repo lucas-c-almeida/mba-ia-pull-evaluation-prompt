@@ -229,17 +229,50 @@ Tone, Acceptance Criteria e Completeness ficaram consistentemente ≥ 0.9; F1 e 
 
 > Conforme a [documentação do LangSmith](https://docs.langchain.com/langsmith/manage-datasets), compartilhar um dataset publicamente também torna públicos *"os exemplos do dataset, os experiments e runs associados, e os feedbacks"*. Ou seja, este único link cobre todas as evidências exigidas — não é necessário (nem existe) compartilhar cada Experiment separadamente. Basta abrir o link e usar a aba **Experiments**.
 
-| Evidência exigida | Onde ver | Status |
-|---|---|---|
-| Dataset de avaliação com ≥ 15 exemplos | Aba **Examples** do link público — dataset `full-cycle-mba-challenge-eval`, carregado de `datasets/bug_to_user_story.jsonl` | ✅ 15 exemplos |
-| Execuções do prompt v1 (ruim) com notas baixas | Aba **Experiments** → `leonanluppi-bug_to_user_story_v1-fe6a7ebc` | ✅ média 0.8733 (4 de 5 métricas < 0.9) |
-| Execuções do prompt v2 (otimizado) com notas ≥ 0.9 | Aba **Experiments** → `lucas-almeida-bug_to_user_story_v2-fcb9a24c` (Execução D, iter. 7) | ✅ todas as 5 métricas ≥ 0.9, média 0.9551 |
-| Tracing detalhado de pelo menos 3 exemplos | Clique em qualquer linha de um Experiment para abrir o trace completo | ✅ 15 execuções rastreadas por Experiment, cada uma com o trace da chamada de geração + os 5 feedbacks (score + comentário do juiz) |
+| Evidência exigida | Onde ver | Screenshot | Status |
+|---|---|---|---|
+| Dataset de avaliação com ≥ 15 exemplos | Aba **Examples** do link público — dataset `full-cycle-mba-challenge-eval`, carregado de `datasets/bug_to_user_story.jsonl` | [`dataset-examples.png`](screenshots/dataset-examples.png) | ✅ 15 exemplos |
+| Execuções do prompt v1 (ruim) com notas baixas | Aba **Experiments** → `leonanluppi-bug_to_user_story_v1-fe6a7ebc` | [`experiment-v1-baseline.png`](screenshots/experiment-v1-baseline.png) | ✅ média 0.8733 (4 de 5 métricas < 0.9) |
+| Execuções do prompt v2 (otimizado) com notas ≥ 0.9 | Aba **Experiments** → `lucas-almeida-bug_to_user_story_v2-fcb9a24c` (Execução D, iter. 7) | [`experiment-v2-aprovado.png`](screenshots/experiment-v2-aprovado.png) | ✅ todas as 5 métricas ≥ 0.9, média 0.9551 |
+| Tracing detalhado de pelo menos 3 exemplos | Clique em qualquer linha de um Experiment para abrir o trace completo | [`experiment-v2-aprovado.png`](screenshots/experiment-v2-aprovado.png) (15 linhas rastreadas) | ✅ 15 execuções por Experiment, cada uma com o trace da chamada de geração + os 5 feedbacks (score + comentário do juiz) |
 
 Links diretos para cada Experiment (mesmo token público):
 
-- **v1 (ruim):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d/compare?selectedSessions=6fb1c9e6-e63c-4a2e-8af5-0c7dd99c88ae`
-- **v2 (aprovado, Execução A):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d/compare?selectedSessions=844045d6-82cc-443a-99fc-52c526ba4b18`
+- **v1 (baseline ruim):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d/compare?selectedSessions=6fb1c9e6-e63c-4a2e-8af5-0c7dd99c88ae`
+- **v2 (aprovado, Execução D / iteração 7):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d/compare?selectedSessions=45d9ecd8-859c-4c50-80c2-c99d1262e46b`
+
+### Screenshots
+
+#### 1. Prompt v2 otimizado — todas as 5 métricas ≥ 0.9 (Execução D, iteração 7)
+
+Experiment `lucas-almeida-bug_to_user_story_v2-fcb9a24c`, 15 exemplos. Médias no
+cabeçalho das colunas: Acceptance Criteria 0.95 · Completeness 0.98 · F1 0.90 ·
+Tone 0.97 · User Story Format 0.98.
+
+![Experiment v2 aprovado com todas as métricas acima de 0.9](screenshots/experiment-v2-aprovado.png)
+
+#### 2. Prompt v1 original (baseline) — notas baixas
+
+Experiment `leonanluppi-bug_to_user_story_v1-fe6a7ebc`, os mesmos 15 exemplos.
+Médias: Acceptance Criteria 0.81 · Completeness 0.89 · F1 0.88 · Tone 0.91 ·
+User Story Format 0.87 — 4 das 5 métricas abaixo do mínimo.
+
+![Experiment v1 baseline com métricas abaixo de 0.9](screenshots/experiment-v1-baseline.png)
+
+#### 3. Comparativo dos Experiments no dataset
+
+Aba **Experiments** do dataset, com o histórico de execuções lado a lado — o v2
+aprovado (#11, `fcb9a24c`), as iterações anteriores e o baseline v1 (#8,
+`fe6a7ebc`).
+
+![Aba Experiments comparando as execuções v1 e v2](screenshots/experiments-comparativo.png)
+
+#### 4. Dataset de avaliação com 15 exemplos
+
+Aba **Examples** do dataset `full-cycle-mba-challenge-eval`, com os 15 relatos de
+bug e suas referências ("15 examples in total" no rodapé).
+
+![Dataset de avaliação com 15 exemplos](screenshots/dataset-examples.png)
 
 ---
 
@@ -368,7 +401,7 @@ para `score: 0.0` em vez de propagar.
 3. **`.env` usa o mesmo modelo para responder e julgar.** A execução C mostrou que separar os papéis (`EVAL_MODEL=gemini-3.5-flash`) melhora 4 das 5 métricas. Vale fixar isso no `.env` em vez de passar por variável de ambiente a cada rodada.
 4. **Custo de tempo da avaliação.** Com juiz `gemini-3.5-flash`, uma rodada de 15 exemplos leva ~10 min (~39s por exemplo), contra ~2 min com o `flash-lite`.
 5. **O dataset no LangSmith nunca é atualizado.** `create_evaluation_dataset()` reusa um dataset existente pelo nome. Se o `.jsonl` mudar, é preciso apagar o dataset no LangSmith (ou usar outro `LANGSMITH_PROJECT`) para que os novos exemplos entrem.
-6. **Screenshots.** As evidências principais são entregues por link público. As capturas de tela ficam versionadas em [`screenshots/`](screenshots/) — veja o README de lá para a lista do que capturar.
+6. **Screenshots.** As capturas de tela estão versionadas em [`screenshots/`](screenshots/) e referenciadas na seção [Evidências](#screenshots). O rodapé da barra lateral do LangSmith foi recortado das imagens do baseline e do dataset, porque exibia o e-mail da conta — as métricas e os 15 exemplos seguem visíveis.
 
 ---
 ---
