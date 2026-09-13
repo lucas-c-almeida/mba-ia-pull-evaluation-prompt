@@ -341,7 +341,9 @@ O processo de iteração revelou problemas específicos que as 3 técnicas isola
 
 ## Resultados Finais
 
-**Dashboard do LangSmith:** projeto `full-cycle-mba-challenge` — `https://smith.langchain.com/projects/full-cycle-mba-challenge` (link visível para quem tiver acesso ao workspace; capturar screenshots do dashboard antes de tornar o repositório público, se aplicável).
+**Dashboard do LangSmith:** projeto `full-cycle-mba-challenge` — `https://smith.langchain.com/projects/full-cycle-mba-challenge` (link visível para quem tiver acesso ao workspace).
+
+**Dataset de avaliação (público):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d` — os 15 exemplos usados na avaliação, acessível sem login.
 
 **Prompt publicado (público):** `https://smith.langchain.com/prompts/bug_to_user_story_v2` (owner: `lucas-almeida`)
 
@@ -379,10 +381,11 @@ Tone, Acceptance Criteria e Completeness ficaram consistentemente ≥ 0.9; F1 e 
 
 ## Evidências no LangSmith
 
-> Os links abaixo apontam para o workspace privado usado neste projeto — requerem acesso ao workspace `Workspace 1` (organização `full-cycle-mba-challenge`). Antes de submeter o desafio, habilite compartilhamento público desses recursos pela UI do LangSmith (botão "Share" no dataset/experiment) ou substitua os links por screenshots, conforme a alternativa aceita pelo `instrucoes.md` ("Link público **ou** screenshots").
+> O dataset já está com compartilhamento público habilitado (link abaixo, acessível sem login). Os links dos Experiments (v1 e v2) ainda apontam para o workspace privado — requerem acesso ao workspace `Workspace 1` (organização `full-cycle-mba-challenge`). Habilite compartilhamento público neles também pela UI do LangSmith (botão "Share" no experiment) ou substitua por screenshots, conforme a alternativa aceita pelo `instrucoes.md` ("Link público **ou** screenshots").
 
 - **Dataset de avaliação com ≥ 15 exemplos:** dataset `full-cycle-mba-challenge-eval`, 15 exemplos (confirmado — carregados de `datasets/bug_to_user_story.jsonl`).
-  `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056`
+  - Link público: `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d`
+  - Link no workspace: `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056`
 - **Execução do prompt v1 (ruim) com notas baixas:** Experiment `leonanluppi-bug_to_user_story_v1-...` — 0.8733 de média, F1/Acceptance Criteria/User Story Format/Completeness abaixo de 0.9.
   `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056/compare?selectedSessions=6fb1c9e6-e63c-4a2e-8af5-0c7dd99c88ae`
 - **Execução do prompt v2 (otimizado) com notas ≥ 0.9:** Experiment `lucas-almeida-bug_to_user_story_v2-...` (Execução A) — todas as 5 métricas ≥ 0.9, média 0.9195.
