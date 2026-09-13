@@ -1,13 +1,18 @@
 # LangChain Core
-langchain==0.3.13
-langchain-core==0.3.28
-langchain-community==0.3.13
+langchain==0.3.28
+langchain-core==0.3.83
+# langchain-community removido: não é importado por nenhum módulo do projeto e
+# sua versão 0.3.13 fixa langsmith<0.3, conflitando com o pin abaixo.
 
 # LangSmith for prompt management and evaluation
-langsmith==0.2.7
+# >=0.7 é necessário para contas com API key organizacional (Personal Access
+# Token multi-workspace): versões mais antigas não suportam a env var
+# LANGSMITH_WORKSPACE_ID / header X-Tenant-Id, causando 403 Forbidden em
+# chamadas de datasets/prompts mesmo com a chave correta.
+langsmith==0.7.22
 
 # LLM Providers
-langchain-openai==0.2.14
+langchain-openai==0.3.35
 langchain-google-genai==2.0.8
 
 # Utilities

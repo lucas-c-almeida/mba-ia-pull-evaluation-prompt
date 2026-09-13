@@ -321,3 +321,95 @@ python src/evaluate.py
 - **Não altere os datasets de avaliação** - apenas os prompts em `prompts/bug_to_user_story_v2.yml`
 - **Itere, itere, itere** - é normal precisar de 3-5 iterações para atingir 0.9 em todas as métricas
 - **Documente seu processo** - a jornada de otimização é tão importante quanto o resultado final
+
+---
+
+# Documentação do Processo (Lucas Almeida)
+
+> As seções abaixo documentam a execução real deste desafio neste repositório. As seções acima são o enunciado original do desafio (mantidas como referência).
+
+## Técnicas Aplicadas (Fase 2)
+
+O prompt otimizado está em [`prompts/bug_to_user_story_v2.yml`](prompts/bug_to_user_story_v2.yml). Foram aplicadas 3 técnicas (mínimo exigido: 2):
+
+| Técnica | Por que foi escolhida | Como foi aplicada | Métrica que mais beneficia |
+|---|---|---|---|
+| **Role Prompting** | O prompt v1 não define nenhuma persona, o que resulta em tom genérico/neutro. Fixar uma persona de PM sênior empático puxa diretamente o tom das respostas. | `system_prompt` abre com: *"Você é um Product Manager (PM) sênior, especialista em metodologias ágeis (Scrum/Kanban), com grande empatia pelo usuário final e foco constante em valor de negócio."* | Tone Score |
+| **Few-shot Learning** | Instruções descritivas sozinhas não garantem que o modelo reproduza o formato exato exigido (User Story + Critérios de Aceitação em Given/When/Then). Exemplos completos calibram o modelo a copiar o padrão. | 2 exemplos completos e inventados (não retirados do dataset de avaliação, para evitar viés): um bug simples (link de recuperação de senha) e um bug complexo (cobrança duplicada), cada um com User Story + Critérios de Aceitação; o complexo também demonstra as seções extras de "Contexto Técnico" e "Tasks Técnicas Sugeridas". | Acceptance Criteria Score, User Story Format Score |
+| **Chain of Thought (CoT)** | Bugs simples e complexos exigem tratamento diferente (um bug de cobrança duplicada com múltiplas reclamações precisa de mais contexto técnico do que um botão que não responde). Um raciocínio em etapas guia o modelo a decidir isso antes de escrever a resposta final. | Bloco "Seu processo de raciocínio" com 6 passos (persona → ação → valor → avaliação de complexidade → critérios de aceitação → contexto técnico condicional), com instrução explícita para não expor os passos, apenas o resultado final. | Completeness Score |
+
+Justificativas completas também ficam versionadas em `techniques_applied` / `techniques_justification` dentro do próprio `prompts/bug_to_user_story_v2.yml`.
+
+### Ajustes feitos durante a iteração
+
+O processo de iteração (3 rodadas) revelou dois problemas específicos que técnicas isoladas não resolviam sozinhas:
+
+1. **Vazamento de detalhes técnicos nos Critérios de Aceitação** — o juiz de `User Story Format Score` penalizava a separação de seções quando termos de implementação (ex: "thread", "índice", "notificar o time financeiro") apareciam dentro dos Critérios de Aceitação em vez de ficarem exclusivamente em "Contexto Técnico"/"Tasks Técnicas". Foi adicionada uma regra explícita proibindo esse vazamento.
+2. **Critérios subjetivos demais** — o `Acceptance Criteria Score` penalizava termos como "rápido"/"fluido" sem um valor mensurável associado (a referência do dataset usa limites concretos como "em menos de 2 segundos"). Foi adicionada uma regra explícita pedindo critérios mensuráveis sempre que o relato permitir inferir uma expectativa razoável.
+
+## Resultados Finais
+
+**Dashboard do LangSmith:** projeto `full-cycle-mba-challenge` — `https://smith.langchain.com/projects/full-cycle-mba-challenge` (link visível para quem tiver acesso ao workspace; capturar screenshots do dashboard antes de tornar o repositório público, se aplicável).
+
+**Prompt publicado (público):** `https://smith.langchain.com/prompts/bug_to_user_story_v2` (owner: `lucas-almeida`)
+
+<!-- Screenshots das avaliações (v1 com notas baixas e v2 com notas >= 0.9) devem ser capturadas do dashboard do LangSmith e anexadas aqui, ex: ![resultado v2](docs/screenshot-v2.png) -->
+
+### Tabela comparativa: v1 (original) vs v2 (otimizado)
+
+Avaliação executada com `python src/evaluate.py --with-v1`, sobre os 15 exemplos do dataset `datasets/bug_to_user_story.jsonl` (modelo de resposta e de avaliação: `gemini-3.5-flash-lite`).
+
+| Métrica | v1 (`leonanluppi/bug_to_user_story_v1`) | v2 (`lucas-almeida/bug_to_user_story_v2`) |
+|---|---|---|
+| F1-Score | 0.89 ✗ | 0.91 ✓ |
+| Tone Score | 0.90 ✓ | 0.92 ✓ |
+| Acceptance Criteria Score | 0.80 ✗ | 0.90 ✓ |
+| User Story Format Score | 0.90 ✓ | 0.90 ✓ |
+| Completeness Score | 0.90 ✓ | 0.92 ✓ |
+| **Média geral** | **0.8791** | **0.9121** |
+| **Status** | ❌ FALHOU (2 de 5 métricas abaixo de 0.9) | ✅ APROVADO (todas as 5 métricas ≥ 0.9) |
+
+Foram necessárias **3 iterações** de push + avaliação até todas as 5 métricas atingirem 0.9 simultaneamente (dentro do intervalo de 3-5 iterações esperado pelo desafio).
+
+## Como Executar
+
+### Pré-requisitos
+
+- Python 3.9+
+- Conta no [LangSmith](https://smith.langchain.com) com uma API key
+- Uma API key de LLM (Google Gemini ou OpenAI)
+- Um handle público no LangSmith Hub (crie publicando manualmente um prompt qualquer em `smith.langchain.com/prompts` — é a única etapa que a API não permite automatizar)
+
+### Instalação
+
+```bash
+python -m venv venv
+source venv/bin/activate       # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env           # preencha as credenciais (LangSmith, LLM, USERNAME_LANGSMITH_HUB)
+```
+
+### Sequência de comandos
+
+```bash
+# 1. Pull do prompt ruim original
+python src/pull_prompts.py
+
+# 2. Editar prompts/bug_to_user_story_v2.yml aplicando as técnicas de otimização
+
+# 3. Push do prompt otimizado (público) para o LangSmith Hub
+python src/push_prompts.py
+
+# 4. Avaliação (cria o dataset no LangSmith se não existir, roda as 5 métricas)
+python src/evaluate.py
+
+# Opcional: também avaliar o v1 original, para gerar a comparação "antes/depois"
+python src/evaluate.py --with-v1
+
+# 5. Testes de validação do prompt
+pytest tests/test_prompts.py -v
+```
+
+**Nota (Windows):** o console usa por padrão a codepage `cp1252`, que não imprime os emojis/checkmarks usados nos scripts. Rode com `PYTHONIOENCODING=utf-8` na frente (Git Bash) ou `$env:PYTHONIOENCODING="utf-8"` antes (PowerShell).
+
+**Nota (cota gratuita do Gemini):** o tier gratuito limita a 15 requisições/minuto por modelo. Cada exemplo do dataset consome 1 chamada de geração + 5 chamadas de avaliação (LLM-as-judge) = 6 chamadas; uma rodada completa (15 exemplos) soma ~90 chamadas. `src/evaluate.py` já inclui um *pacing* automático (`EVAL_CALL_DELAY_SECONDS`, padrão 4.5s) entre chamadas para respeitar essa cota — uma rodada completa leva ~7-8 minutos.
