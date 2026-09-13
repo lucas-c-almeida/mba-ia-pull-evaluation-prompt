@@ -341,15 +341,12 @@ O processo de iteração revelou problemas específicos que as 3 técnicas isola
 
 ## Resultados Finais
 
-**Dashboard do LangSmith:** projeto `full-cycle-mba-challenge` — `https://smith.langchain.com/projects/full-cycle-mba-challenge` (link visível para quem tiver acesso ao workspace).
+**Dashboard público do LangSmith (dataset + todos os experiments + traces):**
+https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d
 
-**Dataset de avaliação (público):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d` — os 15 exemplos usados na avaliação, acessível sem login.
+**Prompt publicado (público):** https://smith.langchain.com/hub/lucas-almeida/bug_to_user_story_v2 (owner: `lucas-almeida`)
 
-**Prompt publicado (público):** `https://smith.langchain.com/hub/lucas-almeida/bug_to_user_story_v2` (owner: `lucas-almeida`)
-
-A avaliação usa `langsmith.evaluation.evaluate()` (ver "Como Executar"), que cria um **Experiment vinculado ao dataset** — visível na aba "Experiments" do LangSmith (`/datasets/<id>/compare?selectedSessions=...`), com feedback (score + comentário do juiz) anexado a cada execução, não apenas traces soltos.
-
-<!-- Screenshots das avaliações (v1 com notas baixas e v2 com notas >= 0.9) devem ser capturadas do dashboard do LangSmith e anexadas aqui, ex: ![resultado v2](docs/screenshot-v2.png) -->
+A avaliação usa `langsmith.evaluation.evaluate()` (ver "Como Executar"), que cria um **Experiment vinculado ao dataset** — visível na aba "Experiments" do link acima, com feedback (score + comentário do juiz) anexado a cada execução, não apenas traces soltos. Veja a seção [Evidências no LangSmith](#evidências-no-langsmith) para o mapa de cada evidência exigida.
 
 > ℹ️ **Nota sobre cota do Gemini e variância do juiz LLM:** durante o desenvolvimento, o `gemini-3.5-flash-lite` esgotou a cota diária gratuita (500 req/dia), o que motivou 3 iterações extras (4-6, ver acima) testadas contra `gemini-3.1-flash-lite`. Depois de créditos serem adicionados à conta do Google (removendo o limite do tier gratuito), a versão final do `bug_to_user_story_v2.yml` (já com as regras das iterações 4-6) foi revalidada contra o modelo oficial `gemini-3.5-flash-lite`. Rodando a mesma versão do prompt duas vezes seguidas, obtivemos: uma execução com **todas as 5 métricas ≥ 0.9** (0.9195 de média) e uma segunda execução com F1-Score e User Story Format Score ficando bem na borda, ~0.01 abaixo de 0.9 (0.9102 de média) — variação normal de um avaliador LLM-as-judge perto do limiar, não uma regressão do prompt. Em ambas as execuções, o v2 superou o v1 nas 5 métricas.
 
@@ -381,16 +378,21 @@ Tone, Acceptance Criteria e Completeness ficaram consistentemente ≥ 0.9; F1 e 
 
 ## Evidências no LangSmith
 
-> O dataset já está com compartilhamento público habilitado (link abaixo, acessível sem login). Os links dos Experiments (v1 e v2) ainda apontam para o workspace privado — requerem acesso ao workspace `Workspace 1` (organização `full-cycle-mba-challenge`). Habilite compartilhamento público neles também pela UI do LangSmith (botão "Share" no experiment) ou substitua por screenshots, conforme a alternativa aceita pelo `instrucoes.md` ("Link público **ou** screenshots").
+**🔗 Link público (acessível sem login):** https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d
 
-- **Dataset de avaliação com ≥ 15 exemplos:** dataset `full-cycle-mba-challenge-eval`, 15 exemplos (confirmado — carregados de `datasets/bug_to_user_story.jsonl`).
-  - Link público: `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d`
-  - Link no workspace: `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056`
-- **Execução do prompt v1 (ruim) com notas baixas:** Experiment `leonanluppi-bug_to_user_story_v1-...` — 0.8733 de média, F1/Acceptance Criteria/User Story Format/Completeness abaixo de 0.9.
-  `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056/compare?selectedSessions=6fb1c9e6-e63c-4a2e-8af5-0c7dd99c88ae`
-- **Execução do prompt v2 (otimizado) com notas ≥ 0.9:** Experiment `lucas-almeida-bug_to_user_story_v2-...` (Execução A) — todas as 5 métricas ≥ 0.9, média 0.9195.
-  `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056/compare?selectedSessions=844045d6-82cc-443a-99fc-52c526ba4b18`
-- **Tracing detalhado de pelo menos 3 exemplos:** cada Experiment acima contém 15 execuções rastreadas (uma por exemplo do dataset), cada uma com o trace completo da chamada ao LLM de geração + os 5 feedbacks (score + comentário do juiz) anexados. Projeto de tracing: `full-cycle-mba-challenge` — `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/projects` (confirmado via API: `reference_dataset_id` de cada Experiment aponta para o dataset acima).
+> Conforme a [documentação do LangSmith](https://docs.langchain.com/langsmith/manage-datasets), compartilhar um dataset publicamente também torna públicos *"os exemplos do dataset, os experiments e runs associados, e os feedbacks"*. Ou seja, este único link cobre todas as evidências exigidas — não é necessário (nem existe) compartilhar cada Experiment separadamente. Basta abrir o link e usar a aba **Experiments**.
+
+| Evidência exigida | Onde ver | Status |
+|---|---|---|
+| Dataset de avaliação com ≥ 15 exemplos | Aba **Examples** do link público — dataset `full-cycle-mba-challenge-eval`, carregado de `datasets/bug_to_user_story.jsonl` | ✅ 15 exemplos |
+| Execuções do prompt v1 (ruim) com notas baixas | Aba **Experiments** → `leonanluppi-bug_to_user_story_v1-fe6a7ebc` | ✅ média 0.8733 (4 de 5 métricas < 0.9) |
+| Execuções do prompt v2 (otimizado) com notas ≥ 0.9 | Aba **Experiments** → `lucas-almeida-bug_to_user_story_v2-4e814d5a` (Execução A) | ✅ todas as 5 métricas ≥ 0.9, média 0.9195 |
+| Tracing detalhado de pelo menos 3 exemplos | Clique em qualquer linha de um Experiment para abrir o trace completo | ✅ 15 execuções rastreadas por Experiment, cada uma com o trace da chamada de geração + os 5 feedbacks (score + comentário do juiz) |
+
+Links diretos para cada Experiment (mesmo token público):
+
+- **v1 (ruim):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d/compare?selectedSessions=6fb1c9e6-e63c-4a2e-8af5-0c7dd99c88ae`
+- **v2 (aprovado, Execução A):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d/compare?selectedSessions=844045d6-82cc-443a-99fc-52c526ba4b18`
 
 ## Como Executar
 
