@@ -361,23 +361,25 @@ A avaliação usa `langsmith.evaluation.evaluate()` (ver "Como Executar"), que c
 
 <!-- Screenshots das avaliações (v1 com notas baixas e v2 com notas >= 0.9) devem ser capturadas do dashboard do LangSmith e anexadas aqui, ex: ![resultado v2](docs/screenshot-v2.png) -->
 
-> ⚠️ **Nota importante sobre cota gratuita e a versão validada:** o `gemini-3.5-flash-lite` tem um limite de 500 requisições/dia por projeto no tier gratuito, que foi esgotado durante o desenvolvimento (várias iterações completas consomem ~90 chamadas cada). A tabela abaixo (v1 vs v2, todas as métricas ≥ 0.9) reflete a **versão do `bug_to_user_story_v2.yml` na Iteração 3** — a última revalidada de ponta a ponta contra esse modelo antes de esgotar a cota. As iterações 4-6 (ajustes de persona/formato acima) foram feitas e validadas contra `gemini-3.1-flash-lite` (cota diária separada), chegando perto mas sem fechar 100% de forma estável (F1 e User Story Format Score oscilando entre 0.88-0.91 nas últimas rodadas, as outras 3 métricas consistentemente ≥ 0.9). O `prompts/bug_to_user_story_v2.yml` atual no repositório já inclui essas regras adicionais; uma revalidação completa contra `gemini-3.5-flash-lite` deve ser feita quando a cota diária resetar.
+> ℹ️ **Nota sobre cota do Gemini e variância do juiz LLM:** durante o desenvolvimento, o `gemini-3.5-flash-lite` esgotou a cota diária gratuita (500 req/dia), o que motivou 3 iterações extras (4-6, ver acima) testadas contra `gemini-3.1-flash-lite`. Depois de créditos serem adicionados à conta do Google (removendo o limite do tier gratuito), a versão final do `bug_to_user_story_v2.yml` (já com as regras das iterações 4-6) foi revalidada contra o modelo oficial `gemini-3.5-flash-lite`. Rodando a mesma versão do prompt duas vezes seguidas, obtivemos: uma execução com **todas as 5 métricas ≥ 0.9** (0.9195 de média) e uma segunda execução com F1-Score e User Story Format Score ficando bem na borda, ~0.01 abaixo de 0.9 (0.9102 de média) — variação normal de um avaliador LLM-as-judge perto do limiar, não uma regressão do prompt. Em ambas as execuções, o v2 superou o v1 nas 5 métricas.
 
-### Tabela comparativa: v1 (original) vs v2 (Iteração 3, otimizado)
+### Tabela comparativa: v1 (original) vs v2 (final, com iterações 1-6)
 
-Avaliação executada com `python src/evaluate.py --with-v1`, sobre os 15 exemplos do dataset `datasets/bug_to_user_story.jsonl` (modelo de resposta e de avaliação: `gemini-3.5-flash-lite`).
+Avaliação executada com `python src/evaluate.py --with-v1`, sobre os 15 exemplos do dataset `datasets/bug_to_user_story.jsonl` (modelo de resposta e de avaliação: `gemini-3.5-flash-lite`, tier pago).
 
-| Métrica | v1 (`leonanluppi/bug_to_user_story_v1`) | v2 (`lucas-almeida/bug_to_user_story_v2`, Iteração 3) |
-|---|---|---|
-| F1-Score | 0.89 ✗ | 0.91 ✓ |
-| Tone Score | 0.90 ✓ | 0.92 ✓ |
-| Acceptance Criteria Score | 0.80 ✗ | 0.90 ✓ |
-| User Story Format Score | 0.90 ✓ | 0.90 ✓ |
-| Completeness Score | 0.90 ✓ | 0.92 ✓ |
-| **Média geral** | **0.8791** | **0.9121** |
-| **Status** | ❌ FALHOU (2 de 5 métricas abaixo de 0.9) | ✅ APROVADO (todas as 5 métricas ≥ 0.9) |
+| Métrica | v1 (`leonanluppi/bug_to_user_story_v1`) | v2 — execução A | v2 — execução B |
+|---|---|---|---|
+| F1-Score | 0.88 ✗ | 0.90 ✓ | 0.90 ✗ (0.8975) |
+| Tone Score | 0.91 ✓ | 0.94 ✓ | 0.92 ✓ |
+| Acceptance Criteria Score | 0.81 ✗ | 0.91 ✓ | 0.92 ✓ |
+| User Story Format Score | 0.87 ✗ | 0.92 ✓ | 0.89 ✗ (0.8920) |
+| Completeness Score | 0.89 ✗ | 0.93 ✓ | 0.93 ✓ |
+| **Média geral** | **0.8733** | **0.9195** | **0.9102** |
+| **Status** | ❌ FALHOU (4 de 5 métricas abaixo de 0.9) | ✅ APROVADO (todas ≥ 0.9) | ❌ FALHOU (2 métricas ~0.01 abaixo de 0.9) |
 
-### Resultados das iterações 4-6 (`gemini-3.1-flash-lite`, prompt final)
+O v2 é categoricamente superior ao v1 em todas as 5 métricas, nas duas execuções. Foram necessárias **6 iterações** de push + avaliação no total (3 contra `gemini-3.5-flash-lite`, 3 contra `gemini-3.1-flash-lite` durante o esgotamento de cota) até o prompt atingir consistentemente ~0.90-0.92 por métrica.
+
+### Histórico das iterações 4-6 (`gemini-3.1-flash-lite`, durante o esgotamento de cota do modelo oficial)
 
 | Iteração | F1 | Tone | Acceptance Criteria | User Story Format | Completeness | Média |
 |---|---|---|---|---|---|---|
@@ -430,4 +432,4 @@ pytest tests/test_prompts.py -v
 
 **Nota (Windows):** o console usa por padrão a codepage `cp1252`, que não imprime os emojis/checkmarks usados nos scripts. Rode com `PYTHONIOENCODING=utf-8` na frente (Git Bash) ou `$env:PYTHONIOENCODING="utf-8"` antes (PowerShell).
 
-**Nota (cota gratuita do Gemini):** o tier gratuito limita a 15 requisições/minuto **e também um total diário por modelo** (ex: 500/dia para `gemini-3.5-flash-lite` no momento em que este projeto foi feito — o limite exato varia por modelo e pode mudar). Cada exemplo do dataset consome 1 chamada de geração + 5 chamadas de avaliação (LLM-as-judge) = 6 chamadas; uma rodada completa (15 exemplos) soma ~90 chamadas. `src/evaluate.py` já inclui um *pacing* automático (`EVAL_CALL_DELAY_SECONDS`, padrão 4.5s) entre chamadas para respeitar o limite por minuto — uma rodada completa leva ~7-8 minutos. Se a cota **diária** esgotar (erro 429 com `quota_id: GenerateRequestsPerDayPerProjectPerModel-FreeTier`), a única saída é trocar de modelo (ex: `gemini-3.1-flash-lite`, que tem cota própria e separada) ou esperar o reset do dia seguinte — não há como contornar isso com mais *pacing*.
+**Nota (cota gratuita do Gemini):** o tier gratuito limita a 15 requisições/minuto **e também um total diário por modelo** (ex: 500/dia para `gemini-3.5-flash-lite` no momento em que este projeto foi feito — o limite exato varia por modelo e pode mudar). Cada exemplo do dataset consome 1 chamada de geração + 5 chamadas de avaliação (LLM-as-judge) = 6 chamadas; uma rodada completa (15 exemplos) soma ~90 chamadas. `src/evaluate.py` já inclui um *pacing* automático (`EVAL_CALL_DELAY_SECONDS`, padrão 4.5s) entre chamadas para respeitar o limite por minuto — uma rodada completa leva ~7-8 minutos. Se a cota **diária** esgotar (erro 429 com `quota_id: GenerateRequestsPerDayPerProjectPerModel-FreeTier`), a única saída é trocar de modelo (ex: `gemini-3.1-flash-lite`, que tem cota própria e separada), adicionar créditos/billing na conta do Google (remove o limite do tier gratuito), ou esperar o reset do dia seguinte — não há como contornar isso com mais *pacing*. Com billing ativo, o *pacing* de 4.5s deixa de ser necessário; pode reduzir com `EVAL_CALL_DELAY_SECONDS=0.5 python src/evaluate.py` para uma rodada de ~1-2 minutos.
