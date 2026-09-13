@@ -45,6 +45,7 @@ ENV/
 *.log
 
 # Project specific
-screenshots/
+# screenshots/ NÃO é ignorado: as evidências do desafio (item B do entregável)
+# precisam estar versionadas no repositório.
 results/
 .claude/

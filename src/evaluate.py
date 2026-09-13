@@ -6,13 +6,14 @@ Este script:
 2. Cria/atualiza dataset no LangSmith
 3. Puxa prompts otimizados do LangSmith Hub (fonte única de verdade)
 4. Executa prompts contra o dataset
-5. Calcula 5 métricas (Helpfulness, Correctness, F1-Score, Clarity, Precision)
-6. Publica resultados no dashboard do LangSmith
+5. Calcula as 5 métricas do critério de aprovação (F1-Score, Tone Score,
+   Acceptance Criteria Score, User Story Format Score, Completeness Score)
+6. Publica resultados no dashboard do LangSmith (como Experiment)
 7. Exibe resumo no terminal
 
 Suporta múltiplos providers de LLM:
 - OpenAI (gpt-4o, gpt-4o-mini)
-- Google Gemini (gemini-1.5-flash, gemini-1.5-pro)
+- Google Gemini (ex: gemini-3.5-flash, gemini-3.5-flash-lite)
 
 Configure o provider no arquivo .env através da variável LLM_PROVIDER.
 """
@@ -263,9 +264,16 @@ def run_experiment(
         return {key: 0.0 for key in METRIC_LABELS}
 
 
-def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
+def display_results(prompt_name: str, scores: Dict[str, float], is_baseline: bool = False) -> bool:
+    """
+    Exibe as métricas de um prompt e devolve se ele atingiu o critério de
+    aprovação (TODAS as métricas >= 0.9).
+
+    `is_baseline=True` marca o prompt v1 original: espera-se que ele reprove,
+    então o resultado aparece como referência comparativa, não como falha.
+    """
     print("\n" + "=" * 50)
-    print(f"Prompt: {prompt_name}")
+    print(f"Prompt: {prompt_name}" + ("  [baseline v1 - reprovar é o esperado]" if is_baseline else ""))
     print("=" * 50)
 
     print("\nMétricas:")
@@ -283,6 +291,11 @@ def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
 
     if passed:
         print(f"\n✅ STATUS: APROVADO - Todas as métricas atingiram o mínimo de 0.9")
+    elif is_baseline:
+        print(f"\nℹ️  STATUS: baseline abaixo de 0.9 (esperado - é o prompt ruim de referência)")
+        for key, label in METRIC_LABELS.items():
+            if scores[key] < 0.9:
+                print(f"   ⚠️  {label} abaixo do mínimo: {scores[key]:.4f}")
     else:
         print(f"\n❌ STATUS: FALHOU - Métricas abaixo do mínimo de 0.9")
         for key, label in METRIC_LABELS.items():
@@ -334,41 +347,47 @@ def main():
 
     username = os.getenv("USERNAME_LANGSMITH_HUB")
     prompts_to_evaluate = [
-        f"{username}/bug_to_user_story_v2",
+        (f"{username}/bug_to_user_story_v2", False),
     ]
 
     # Passe --with-v1 para também avaliar o prompt original (ruim), gerando no
     # LangSmith as execuções "antes" usadas como evidência comparativa no README.
+    # Ele entra marcado como baseline: espera-se que reprove, então não conta no
+    # veredito final nem no código de saída do script.
     if "--with-v1" in sys.argv:
-        prompts_to_evaluate.insert(0, "leonanluppi/bug_to_user_story_v1")
+        prompts_to_evaluate.insert(0, ("leonanluppi/bug_to_user_story_v1", True))
 
     all_passed = True
     evaluated_count = 0
     results_summary = []
 
-    for prompt_name in prompts_to_evaluate:
+    for prompt_name, is_baseline in prompts_to_evaluate:
         evaluated_count += 1
 
         try:
             scores = run_experiment(prompt_name, dataset_name, client)
 
-            passed = display_results(prompt_name, scores)
-            all_passed = all_passed and passed
+            passed = display_results(prompt_name, scores, is_baseline=is_baseline)
+            if not is_baseline:
+                all_passed = all_passed and passed
 
             results_summary.append({
                 "prompt": prompt_name,
                 "scores": scores,
-                "passed": passed
+                "passed": passed,
+                "baseline": is_baseline,
             })
 
         except Exception as e:
             print(f"\n❌ Falha ao avaliar '{prompt_name}': {e}")
-            all_passed = False
+            if not is_baseline:
+                all_passed = False
 
             results_summary.append({
                 "prompt": prompt_name,
                 "scores": {key: 0.0 for key in METRIC_LABELS},
-                "passed": False
+                "passed": False,
+                "baseline": is_baseline,
             })
 
     print("\n" + "=" * 50)
@@ -379,14 +398,19 @@ def main():
         print("⚠️  Nenhum prompt foi avaliado")
         return 1
 
+    scored = [r for r in results_summary if not r["baseline"]]
+    baselines = [r for r in results_summary if r["baseline"]]
+
     print(f"Prompts avaliados: {evaluated_count}")
-    print(f"Aprovados: {sum(1 for r in results_summary if r['passed'])}")
-    print(f"Reprovados: {sum(1 for r in results_summary if not r['passed'])}\n")
+    if baselines:
+        print(f"  (dos quais {len(baselines)} como baseline v1, fora do veredito)")
+    print(f"Aprovados: {sum(1 for r in scored if r['passed'])}")
+    print(f"Reprovados: {sum(1 for r in scored if not r['passed'])}\n")
 
     if all_passed:
         print("✅ Todos os prompts atingiram >= 0.9 em TODAS as métricas!")
-        print(f"\n✓ Confira os resultados em:")
-        print(f"  https://smith.langchain.com/projects/{project_name}")
+        print(f"\n✓ Confira os resultados no Experiment impresso acima, ou em")
+        print(f"  https://smith.langchain.com/datasets — dataset '{dataset_name}', aba 'Experiments'")
         print("\nPróximos passos:")
         print("1. Documente o processo no README.md")
         print("2. Capture screenshots das avaliações")

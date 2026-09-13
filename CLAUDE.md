@@ -8,7 +8,7 @@ Desafio do MBA FullCycle ("Pull, Otimização e Avaliação de Prompts com LangC
 
 Fluxo do desafio: pull do prompt ruim (`leonanluppi/bug_to_user_story_v1`) → otimizar em v2 com técnicas de prompt engineering → push público para o Hub como `{USERNAME_LANGSMITH_HUB}/bug_to_user_story_v2` → avaliar até todas as métricas ficarem >= 0.9.
 
-**`instrucoes.md` é a especificação autoritativa.** O `README.md` é a versão anterior do enunciado e está defasado (fala em 4 métricas Tone/AC/Format/Completeness e em dataset com ≥20 exemplos). Quando houver conflito, siga `instrucoes.md`.
+**`instrucoes.md` é a especificação autoritativa.** O `README.md` já foi reescrito como documentação da entrega (status, técnicas, resultados, evidências, limitações), com o enunciado preservado num apêndice ao final. Quando houver conflito, siga `instrucoes.md`.
 
 ## Comandos
 
@@ -35,13 +35,12 @@ pytest tests/test_prompts.py::TestPrompts::test_prompt_has_system_prompt -v   # 
 - Gerais: `evaluate_f1_score` (pede precision+recall ao juiz e calcula o F1 em Python), `evaluate_clarity`, `evaluate_precision`.
 - Específicas de Bug→User Story: `evaluate_tone_score`, `evaluate_acceptance_criteria_score`, `evaluate_user_story_format_score`, `evaluate_completeness_score`.
 
-**`src/evaluate.py`** — orquestra: carrega o `.jsonl`, cria o dataset no LangSmith se não existir (reusa por nome, nunca atualiza), faz `hub.pull` do prompt v2, monta `prompt | llm`, e pontua os exemplos.
+**`src/evaluate.py`** — orquestra: carrega o `.jsonl`, cria o dataset no LangSmith se não existir (reusa por nome, **nunca atualiza** — mudou o `.jsonl`? apague o dataset ou troque `LANGSMITH_PROJECT`), faz `hub.pull` de `{USERNAME_LANGSMITH_HUB}/bug_to_user_story_v2`, monta `prompt | llm` e roda `langsmith.evaluation.evaluate()`, criando um Experiment vinculado ao dataset.
 
-Pontos que **precisam ser ajustados** para bater com o critério de aprovação de `instrucoes.md`:
-- Só chama F1/Clarity/Precision e deriva "helpfulness"/"correctness" delas; o critério exige F1 + Tone + Acceptance Criteria + User Story Format + Completeness.
-- `display_results()` aprova pela **média**; o enunciado exige **cada** métrica >= 0.9.
-- Avalia só `examples[:10]` — o dataset tem 15.
-- `prompts_to_evaluate` usa `"bug_to_user_story_v2"` sem o prefixo de usuário; o `hub.pull` precisa de `{USERNAME_LANGSMITH_HUB}/bug_to_user_story_v2`.
+- As 5 métricas do veredito são F1 + Tone + Acceptance Criteria + User Story Format + Completeness (`METRIC_LABELS`). `evaluate_clarity`/`evaluate_precision` existem em `metrics.py` mas não entram no veredito.
+- `display_results()` aprova só se **cada** métrica >= 0.9 (a média é informativa).
+- `--with-v1` adiciona `leonanluppi/bug_to_user_story_v1` como **baseline**: espera-se que reprove, então ele não conta no `all_passed` nem no código de saída.
+- `EVAL_CALL_DELAY_SECONDS` (padrão 4.5s) + `max_concurrency=0` fazem o pacing da cota gratuita do Gemini. Com billing ativo, reduza para ~0.5.
 
 **Prompts em YAML** (`prompts/*.yml`) — dicionário de topo chaveado pelo nome do prompt, com `description`, `system_prompt` (template com `{bug_report}`), `user_prompt`, `version`, `tags`. O v2 precisa adicionalmente de `techniques_applied` com **pelo menos 2 técnicas**: `utils.validate_prompt_structure()` valida exatamente isso (campos obrigatórios, `system_prompt` não vazio, ausência de `TODO`, >= 2 técnicas) e é o que `tests/test_prompts.py` consome.
 
