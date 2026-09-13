@@ -4,11 +4,11 @@
 
 Você deve entregar um software capaz de:
 
-1. **Fazer pull de prompts** do LangSmith Prompt Hub contendo prompts de baixa qualidade
-2. **Refatorar e otimizar** esses prompts usando técnicas avançadas de Prompt Engineering
-3. **Fazer push dos prompts otimizados** de volta ao LangSmith
-4. **Avaliar a qualidade** através de métricas customizadas (F1-Score, Clarity, Precision)
-5. **Atingir pontuação mínima** de 0.9 (90%) em todas as métricas de avaliação
+- **Fazer pull de prompts** do LangSmith Prompt Hub contendo prompts de baixa qualidade
+- **Refatorar e otimizar** esses prompts usando técnicas avançadas de Prompt Engineering
+- **Fazer push dos prompts otimizados** de volta ao LangSmith
+- **Avaliar a qualidade** através de métricas customizadas (F1-Score, Tone Score, Acceptance Criteria Score, User Story Format Score, Completeness Score)
+- **Atingir pontuação mínima** de 0.9 (90%) em todas as métricas de avaliação
 
 ---
 
@@ -21,15 +21,13 @@ python src/pull_prompts.py
 # Executar avaliação inicial (prompts ruins)
 python src/evaluate.py
 
-Executando avaliação dos prompts...
-================================
-Prompt: support_bot_v1a
-- Helpfulness: 0.45
-- Correctness: 0.52
+# Executando avaliação dos prompts...
+Prompt: bug_to_user_story_v1
 - F1-Score: 0.48
-- Clarity: 0.50
-- Precision: 0.46
-================================
+- Tone Score: 0.45
+- Acceptance Criteria Score: 0.52
+- User Story Format Score: 0.48
+- Completeness Score: 0.50
 Status: FALHOU - Métricas abaixo do mínimo de 0.9
 
 # Após refatorar os prompts e fazer push
@@ -38,17 +36,16 @@ python src/push_prompts.py
 # Executar avaliação final (prompts otimizados)
 python src/evaluate.py
 
-Executando avaliação dos prompts...
-================================
-Prompt: support_bot_v2_optimized
-- Helpfulness: 0.94
-- Correctness: 0.96
+# Executando avaliação dos prompts...
+Prompt: bug_to_user_story_v2
 - F1-Score: 0.93
-- Clarity: 0.95
-- Precision: 0.92
-================================
+- Tone Score: 0.94
+- Acceptance Criteria Score: 0.96
+- User Story Format Score: 0.93
+- Completeness Score: 0.95
 Status: APROVADO ✓ - Todas as métricas atingiram o mínimo de 0.9
 ```
+
 ---
 
 ## Tecnologias obrigatórias
@@ -100,9 +97,9 @@ O repositório base já contém prompts de **baixa qualidade** publicados no Lan
 1. Configurar suas credenciais do LangSmith no arquivo `.env` (conforme instruções no `README.md` do repositório base)
 2. Acessar o script `src/pull_prompts.py` que:
    - Conecta ao LangSmith usando suas credenciais
-   - Faz pull do seguinte prompts:
+   - Faz pull do seguinte prompt:
      - `leonanluppi/bug_to_user_story_v1`
-   - Salva os prompts localmente em `prompts/raw_prompts.yml`
+   - Salva os prompts localmente em `prompts/bug_to_user_story_v1.yml`
 
 ---
 
@@ -145,7 +142,7 @@ Após refatorar os prompts, você deve enviá-los de volta ao LangSmith Prompt H
      - `{seu_username}/bug_to_user_story_v2`
    - Adiciona metadados (tags, descrição, técnicas utilizadas)
 2. Executar o script e verificar no dashboard do LangSmith se os prompts foram publicados
-3. Deixa-lo público
+3. Deixá-lo público
 
 ---
 
@@ -158,16 +155,15 @@ Após refatorar os prompts, você deve enviá-los de volta ao LangSmith Prompt H
 
 ### Critério de Aprovação:
 
-```
+- F1-Score >= 0.9
 - Tone Score >= 0.9
 - Acceptance Criteria Score >= 0.9
 - User Story Format Score >= 0.9
 - Completeness Score >= 0.9
 
-MÉDIA das 4 métricas >= 0.9
-```
+MÉDIA das 5 métricas >= 0.9
 
-**IMPORTANTE:** TODAS as 4 métricas devem estar >= 0.9, não apenas a média!
+**IMPORTANTE:** TODAS as 5 métricas devem estar >= 0.9, não apenas a média!
 
 ### 5. Testes de Validação
 
@@ -190,50 +186,47 @@ pytest tests/test_prompts.py
 
 ## Estrutura obrigatória do projeto
 
-Faça um fork do repositório base: **[Clique aqui para o template](https://github.com/devfullcycle/mba-ia-pull-evaluation-prompt)**
+Faça um fork do repositório base: **[https://github.com/devfullcycle/mba-ia-pull-evaluation-prompt](https://github.com/devfullcycle/mba-ia-pull-evaluation-prompt)**
 
 ```
-desafio-prompt-engineer/
-├── .env.example              # Template das variáveis de ambiente
-├── requirements.txt          # Dependências Python
-├── README.md                 # Sua documentação do processo
-│
+mba-ia-pull-evaluation-prompt/
+├── .env.example                  # Template das variáveis de ambiente
+├── requirements.txt              # Dependências Python
+├── README.md                     # Sua documentação do processo
+├── datasets/
+│   └── bug_to_user_story.jsonl   # 15 exemplos de bugs (JSONL)
 ├── prompts/
-│   ├── bug_to_user_story_v1.yml       # Prompt inicial (após pull)
-│   └── bug_to_user_story_v2.yml # Seu prompt otimizado
-│
+│   ├── bug_to_user_story_v1.yml  # Prompt inicial (após pull)
+│   └── bug_to_user_story_v2.yml  # Seu prompt otimizado
 ├── src/
-│   ├── pull_prompts.py       # Pull do LangSmith
-│   ├── push_prompts.py       # Push ao LangSmith
-│   ├── evaluate.py           # Avaliação automática
-│   ├── metrics.py            # 4 métricas implementadas
-│   ├── dataset.py            # 15 exemplos de bugs
-│   └── utils.py              # Funções auxiliares
-│
-├── tests/
-│   └── test_prompts.py       # Testes de validação
-│
+│   ├── pull_prompts.py           # Pull do LangSmith
+│   ├── push_prompts.py           # Push ao LangSmith
+│   ├── evaluate.py               # Avaliação automática
+│   ├── metrics.py                # 5 métricas implementadas
+│   └── utils.py                  # Funções auxiliares
+└── tests/
+    └── test_prompts.py           # Testes de validação
 ```
 
-**O que você vai criar:**
+## O que você vai criar
 
 - `prompts/bug_to_user_story_v2.yml` - Seu prompt otimizado
 - `tests/test_prompts.py` - Seus testes de validação
-- `src/pull_prompt.py` Script de pull do repositório da fullcycle
-- `src/push_prompt.py` Script de push para o seu repositório
+- `src/pull_prompts.py` - Script de pull do repositório da fullcycle
+- `src/push_prompts.py` - Script de push para o seu repositório
 - `README.md` - Documentação do seu processo de otimização
 
-**O que já vem pronto:**
+## O que já vem pronto
 
 - Dataset com 15 bugs (5 simples, 7 médios, 3 complexos)
-- 4 métricas específicas para Bug to User Story
+- 5 métricas de avaliação (F1-Score + 4 específicas para Bug to User Story)
 - Suporte multi-provider (OpenAI e Gemini)
 
 ## Repositórios úteis
 
-- [Repositório boilerplate do desafio](https://github.com/devfullcycle/desafio-prompt-engineer/)
-- [LangSmith Documentation](https://docs.smith.langchain.com/)
-- [Prompt Engineering Guide](https://www.promptingguide.ai/)
+- Repositório boilerplate do desafio: [https://github.com/devfullcycle/mba-ia-pull-evaluation-prompt](https://github.com/devfullcycle/mba-ia-pull-evaluation-prompt)
+- LangSmith Documentation: [https://docs.smith.langchain.com/](https://docs.smith.langchain.com/)
+- Prompt Engineering Guide: [https://www.promptingguide.ai/](https://www.promptingguide.ai/)
 
 ## VirtualEnv para Python
 
@@ -265,7 +258,7 @@ Edite manualmente o arquivo `prompts/bug_to_user_story_v2.yml` aplicando as téc
 python src/push_prompts.py
 ```
 
-### 5. Executar avaliação
+### 4. Executar avaliação
 
 ```bash
 python src/evaluate.py
@@ -275,37 +268,32 @@ python src/evaluate.py
 
 ## Entregável
 
-1. **Repositório público no GitHub** (fork do repositório base) contendo:
-
+1. **Repositório público no GitHub (fork do repositório base) contendo:**
    - Todo o código-fonte implementado
    - Arquivo `prompts/bug_to_user_story_v2.yml` 100% preenchido e funcional
-   - Arquivo `README.md` atualizado com:
+   - Arquivo `README.md` atualizado com as seções abaixo
 
 2. **README.md deve conter:**
 
-   A) **Seção "Técnicas Aplicadas (Fase 2)"**:
-
+   **A) Seção "Técnicas Aplicadas (Fase 2)":**
    - Quais técnicas avançadas você escolheu para refatorar os prompts
    - Justificativa de por que escolheu cada técnica
    - Exemplos práticos de como aplicou cada técnica
 
-   B) **Seção "Resultados Finais"**:
-
+   **B) Seção "Resultados Finais"**
    - Link público do seu dashboard do LangSmith mostrando as avaliações
    - Screenshots das avaliações com as notas mínimas de 0.9 atingidas
    - Tabela comparativa: prompts ruins (v1) vs prompts otimizados (v2)
 
-   C) **Seção "Como Executar"**:
-
+   **C) Seção "Como Executar"**
    - Instruções claras e detalhadas de como executar o projeto
    - Pré-requisitos e dependências
    - Comandos para cada fase do projeto
 
-3. **Evidências no LangSmith**:
+   **D) Evidências no LangSmith**
    - Link público (ou screenshots) do dashboard do LangSmith
    - Devem estar visíveis:
-
-     - Dataset de avaliação com ≥ 20 exemplos
+     - Dataset de avaliação com ≥ 15 exemplos
      - Execuções dos prompts v1 (ruins) com notas baixas
      - Execuções dos prompts v2 (otimizados) com notas ≥ 0.9
      - Tracing detalhado de pelo menos 3 exemplos
@@ -314,19 +302,19 @@ python src/evaluate.py
 
 ## Dicas Finais
 
-- **Lembre-se da importância da especificidade, contexto e persona** ao refatorar prompts
-- **Use Few-shot Learning com 2-3 exemplos claros** para melhorar drasticamente a performance
-- **Chain of Thought (CoT)** é excelente para tarefas que exigem raciocínio complexo (como análise de PRs)
-- **Use o Tracing do LangSmith** como sua principal ferramenta de debug - ele mostra exatamente o que o LLM está "pensando"
-- **Não altere os datasets de avaliação** - apenas os prompts em `prompts/bug_to_user_story_v2.yml`
-- **Itere, itere, itere** - é normal precisar de 3-5 iterações para atingir 0.9 em todas as métricas
-- **Documente seu processo** - a jornada de otimização é tão importante quanto o resultado final
+- Lembre-se da importância da especificidade, contexto e persona ao refatorar prompts
+- Use Few-shot Learning com 2-3 exemplos claros para melhorar drasticamente a performance
+- Chain of Thought (CoT) é excelente para tarefas que exigem raciocínio complexo (como análise de bugs)
+- Use o Tracing do LangSmith como sua principal ferramenta de debug - ele mostra exatamente o que o LLM está "pensando"
+- Não altere os datasets de avaliação
+- Itere, itere, itere - é normal precisar de 3-5 iterações para atingir 0.9 em todas as métricas
+- Documente seu processo - a jornada de otimização é tão importante quanto o resultado final
 
 ---
 
 # Documentação do Processo (Lucas Almeida)
 
-> As seções abaixo documentam a execução real deste desafio neste repositório. As seções acima são o enunciado original do desafio (mantidas como referência).
+> As seções abaixo documentam a execução real deste desafio neste repositório, seguindo os itens A, B, C e D exigidos em `instrucoes.md` (a seção acima replica o enunciado atual, mantido como referência).
 
 ## Técnicas Aplicadas (Fase 2)
 
@@ -388,6 +376,18 @@ O v2 é categoricamente superior ao v1 em todas as 5 métricas, nas duas execuç
 | 6 | 0.8975 ✗ | 0.95 ✓ | 0.94 ✓ | 0.8920 ✗ | 0.94 ✓ | 0.9222 |
 
 Tone, Acceptance Criteria e Completeness ficaram consistentemente ≥ 0.9; F1 e User Story Format Score oscilaram na faixa 0.88-0.90 sem convergir de forma estável, dentro do que parece ser ruído normal do LLM-juiz nessa fronteira, não um erro sistemático identificável no prompt.
+
+## Evidências no LangSmith
+
+> Os links abaixo apontam para o workspace privado usado neste projeto — requerem acesso ao workspace `Workspace 1` (organização `full-cycle-mba-challenge`). Antes de submeter o desafio, habilite compartilhamento público desses recursos pela UI do LangSmith (botão "Share" no dataset/experiment) ou substitua os links por screenshots, conforme a alternativa aceita pelo `instrucoes.md` ("Link público **ou** screenshots").
+
+- **Dataset de avaliação com ≥ 15 exemplos:** dataset `full-cycle-mba-challenge-eval`, 15 exemplos (confirmado — carregados de `datasets/bug_to_user_story.jsonl`).
+  `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056`
+- **Execução do prompt v1 (ruim) com notas baixas:** Experiment `leonanluppi-bug_to_user_story_v1-...` — 0.8733 de média, F1/Acceptance Criteria/User Story Format/Completeness abaixo de 0.9.
+  `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056/compare?selectedSessions=6fb1c9e6-e63c-4a2e-8af5-0c7dd99c88ae`
+- **Execução do prompt v2 (otimizado) com notas ≥ 0.9:** Experiment `lucas-almeida-bug_to_user_story_v2-...` (Execução A) — todas as 5 métricas ≥ 0.9, média 0.9195.
+  `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/datasets/e49688a3-455d-43e5-ad2a-d62737131056/compare?selectedSessions=844045d6-82cc-443a-99fc-52c526ba4b18`
+- **Tracing detalhado de pelo menos 3 exemplos:** cada Experiment acima contém 15 execuções rastreadas (uma por exemplo do dataset), cada uma com o trace completo da chamada ao LLM de geração + os 5 feedbacks (score + comentário do juiz) anexados. Projeto de tracing: `full-cycle-mba-challenge` — `https://smith.langchain.com/o/849bf789-3ad2-4b9c-899f-ca58783a0f55/projects` (confirmado via API: `reference_dataset_id` de cada Experiment aponta para o dataset acima).
 
 ## Como Executar
 
