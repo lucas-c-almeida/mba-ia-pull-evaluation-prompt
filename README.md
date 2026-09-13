@@ -345,7 +345,7 @@ O processo de iteração revelou problemas específicos que as 3 técnicas isola
 
 **Dataset de avaliação (público):** `https://smith.langchain.com/public/1301c56a-d9bc-4e11-b129-1bbdf88d0358/d` — os 15 exemplos usados na avaliação, acessível sem login.
 
-**Prompt publicado (público):** `https://smith.langchain.com/prompts/bug_to_user_story_v2` (owner: `lucas-almeida`)
+**Prompt publicado (público):** `https://smith.langchain.com/hub/lucas-almeida/bug_to_user_story_v2` (owner: `lucas-almeida`)
 
 A avaliação usa `langsmith.evaluation.evaluate()` (ver "Como Executar"), que cria um **Experiment vinculado ao dataset** — visível na aba "Experiments" do LangSmith (`/datasets/<id>/compare?selectedSessions=...`), com feedback (score + comentário do juiz) anexado a cada execução, não apenas traces soltos.
 
