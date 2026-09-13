@@ -25,6 +25,7 @@ from typing import List, Dict, Any
 from pathlib import Path
 from dotenv import load_dotenv
 from langsmith import Client
+from langsmith.evaluation import evaluate as ls_evaluate
 from langchain import hub
 from langchain_core.prompts import ChatPromptTemplate
 from utils import check_env_vars, format_score, print_section_header, get_llm as get_configured_llm
@@ -153,120 +154,6 @@ def pull_prompt_from_langsmith(prompt_name: str) -> ChatPromptTemplate:
         raise
 
 
-def evaluate_prompt_on_example(
-    prompt_template: ChatPromptTemplate,
-    example: Any,
-    llm: Any
-) -> Dict[str, Any]:
-    try:
-        inputs = example.inputs if hasattr(example, 'inputs') else {}
-        outputs = example.outputs if hasattr(example, 'outputs') else {}
-
-        chain = prompt_template | llm
-
-        response = chain.invoke(inputs)
-        answer = response.content
-
-        reference = outputs.get("reference", "") if isinstance(outputs, dict) else ""
-
-        if isinstance(inputs, dict):
-            question = inputs.get("question", inputs.get("bug_report", inputs.get("pr_title", "N/A")))
-        else:
-            question = "N/A"
-
-        return {
-            "answer": answer,
-            "reference": reference,
-            "question": question
-        }
-
-    except Exception as e:
-        print(f"      ⚠️  Erro ao avaliar exemplo: {e}")
-        import traceback
-        print(f"      Traceback: {traceback.format_exc()}")
-        return {
-            "answer": "",
-            "reference": "",
-            "question": ""
-        }
-
-
-def evaluate_prompt(
-    prompt_name: str,
-    dataset_name: str,
-    client: Client
-) -> Dict[str, float]:
-    print(f"\n🔍 Avaliando: {prompt_name}")
-
-    try:
-        prompt_template = pull_prompt_from_langsmith(prompt_name)
-
-        examples = list(client.list_examples(dataset_name=dataset_name))
-        print(f"   Dataset: {len(examples)} exemplos")
-
-        llm = get_llm()
-
-        f1_scores = []
-        tone_scores = []
-        acceptance_criteria_scores = []
-        user_story_format_scores = []
-        completeness_scores = []
-
-        print("   Avaliando exemplos...")
-
-        for i, example in enumerate(examples, 1):
-            result = evaluate_prompt_on_example(prompt_template, example, llm)
-            time.sleep(EVAL_CALL_DELAY_SECONDS)
-
-            if result["answer"]:
-                bug_report = result["question"]
-                answer = result["answer"]
-                reference = result["reference"]
-
-                f1 = evaluate_f1_score(bug_report, answer, reference)
-                time.sleep(EVAL_CALL_DELAY_SECONDS)
-                tone = evaluate_tone_score(bug_report, answer, reference)
-                time.sleep(EVAL_CALL_DELAY_SECONDS)
-                acceptance_criteria = evaluate_acceptance_criteria_score(bug_report, answer, reference)
-                time.sleep(EVAL_CALL_DELAY_SECONDS)
-                user_story_format = evaluate_user_story_format_score(bug_report, answer, reference)
-                time.sleep(EVAL_CALL_DELAY_SECONDS)
-                completeness = evaluate_completeness_score(bug_report, answer, reference)
-
-                f1_scores.append(f1["score"])
-                tone_scores.append(tone["score"])
-                acceptance_criteria_scores.append(acceptance_criteria["score"])
-                user_story_format_scores.append(user_story_format["score"])
-                completeness_scores.append(completeness["score"])
-
-                print(
-                    f"      [{i}/{len(examples)}] F1:{f1['score']:.2f} "
-                    f"Tone:{tone['score']:.2f} AC:{acceptance_criteria['score']:.2f} "
-                    f"Format:{user_story_format['score']:.2f} Complet:{completeness['score']:.2f}"
-                )
-
-        def _avg(scores):
-            return round(sum(scores) / len(scores), 4) if scores else 0.0
-
-        return {
-            "f1_score": _avg(f1_scores),
-            "tone_score": _avg(tone_scores),
-            "acceptance_criteria_score": _avg(acceptance_criteria_scores),
-            "user_story_format_score": _avg(user_story_format_scores),
-            "completeness_score": _avg(completeness_scores),
-        }
-
-    except Exception as e:
-        print(f"   ❌ Erro na avaliação: {e}")
-        return {
-            "f1_score": 0.0,
-            "tone_score": 0.0,
-            "acceptance_criteria_score": 0.0,
-            "user_story_format_score": 0.0,
-            "completeness_score": 0.0,
-        }
-
-
 METRIC_LABELS = {
     "f1_score": "F1-Score",
     "tone_score": "Tone Score",
@@ -274,6 +161,106 @@ METRIC_LABELS = {
     "user_story_format_score": "User Story Format Score",
     "completeness_score": "Completeness Score",
 }
+
+
+def _build_target(chain):
+    """
+    Constrói a função `target` exigida por `langsmith.evaluation.evaluate()`:
+    recebe `example.inputs` (nunca a referência) e retorna um dict.
+    """
+    def predict(inputs: dict) -> dict:
+        response = chain.invoke(inputs)
+        time.sleep(EVAL_CALL_DELAY_SECONDS)
+        return {"answer": response.content}
+
+    return predict
+
+
+def _make_evaluator(key: str, metric_fn, question_field: str = "bug_report"):
+    """
+    Embrulha uma função de métrica de metrics.py no formato de evaluator
+    esperado por `evaluate()`: `(inputs, outputs, reference_outputs) -> dict`.
+    `outputs` é o que o `target` retornou; `reference_outputs` é `example.outputs`.
+    """
+    def evaluator(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
+        result = metric_fn(
+            inputs.get(question_field, ""),
+            outputs.get("answer", ""),
+            reference_outputs.get("reference", ""),
+        )
+        time.sleep(EVAL_CALL_DELAY_SECONDS)
+        return {"key": key, "score": result["score"], "comment": result["reasoning"]}
+
+    evaluator.__name__ = key
+    return evaluator
+
+
+EVALUATORS = [
+    _make_evaluator("f1_score", evaluate_f1_score),
+    _make_evaluator("tone_score", evaluate_tone_score),
+    _make_evaluator("acceptance_criteria_score", evaluate_acceptance_criteria_score),
+    _make_evaluator("user_story_format_score", evaluate_user_story_format_score),
+    _make_evaluator("completeness_score", evaluate_completeness_score),
+]
+
+
+def run_experiment(
+    prompt_name: str,
+    dataset_name: str,
+    client: Client
+) -> Dict[str, float]:
+    """
+    Avalia um prompt do LangSmith Hub contra o dataset usando
+    `langsmith.evaluation.evaluate()`. Isso cria um Experiment vinculado ao
+    dataset (visível na aba "Experiments" do LangSmith), em vez de apenas
+    traces soltos, permitindo comparar visualmente as execuções de v1 e v2.
+    """
+    print(f"\n🔍 Avaliando: {prompt_name}")
+
+    try:
+        prompt_template = pull_prompt_from_langsmith(prompt_name)
+        llm = get_llm()
+        chain = prompt_template | llm
+
+        experiment_prefix = prompt_name.replace("/", "-")
+
+        results = ls_evaluate(
+            _build_target(chain),
+            data=dataset_name,
+            evaluators=EVALUATORS,
+            experiment_prefix=experiment_prefix,
+            client=client,
+            # 0 = sem concorrência (sequencial) — respeita a cota gratuita do
+            # Gemini (15 req/min) junto com EVAL_CALL_DELAY_SECONDS.
+            max_concurrency=0,
+        )
+
+        print(f"   🔗 Experiment: {results.url}")
+
+        scores: Dict[str, list] = {key: [] for key in METRIC_LABELS}
+
+        for row in results:
+            eval_results = row["evaluation_results"]["results"]
+            for eval_result in eval_results:
+                key = getattr(eval_result, "key", None)
+                if key is None and isinstance(eval_result, dict):
+                    key = eval_result.get("key")
+
+                score = getattr(eval_result, "score", None)
+                if score is None and isinstance(eval_result, dict):
+                    score = eval_result.get("score")
+
+                if key in scores and score is not None:
+                    scores[key].append(score)
+
+        def _avg(values):
+            return round(sum(values) / len(values), 4) if values else 0.0
+
+        return {key: _avg(values) for key, values in scores.items()}
+
+    except Exception as e:
+        print(f"   ❌ Erro na avaliação: {e}")
+        return {key: 0.0 for key in METRIC_LABELS}
 
 
 def display_results(prompt_name: str, scores: Dict[str, float]) -> bool:
@@ -363,7 +350,7 @@ def main():
         evaluated_count += 1
 
         try:
-            scores = evaluate_prompt(prompt_name, dataset_name, client)
+            scores = run_experiment(prompt_name, dataset_name, client)
 
             passed = display_results(prompt_name, scores)
             all_passed = all_passed and passed
