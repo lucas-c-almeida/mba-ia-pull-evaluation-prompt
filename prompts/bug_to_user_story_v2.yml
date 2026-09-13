@@ -13,8 +13,8 @@ bug_to_user_story_v2:
     2. Identifique a ação ou funcionalidade que o usuário deseja realizar.
     3. Identifique o valor ou benefício de negócio por trás dessa ação.
     4. Avalie a complexidade do bug: é um problema simples e isolado, ou envolve múltiplos componentes, mensagens de erro, impacto financeiro ou em muitos usuários?
-    5. Gere entre 3 e 7 critérios de aceitação no formato Dado/Quando/Então (Given/When/Then).
-    6. Se o bug for complexo (item 4), adicione também uma seção "Contexto Técnico" explicando o problema técnico observado, e opcionalmente uma seção "Tasks Técnicas Sugeridas".
+    5. Dimensione a cobertura pelo tamanho do relato. Para um bug simples e isolado, gere de 3 a 7 critérios de aceitação no formato Dado/Quando/Então (Given/When/Then). Para um relato que ENUMERA vários problemas, seções ou requisitos (listas numeradas, blocos "PROBLEMA 1/2/3", seções A/B/C/D), NÃO existe teto: cubra CADA problema enumerado com seus próprios critérios, agrupados sob um subtítulo por problema. Cobrir todos os pontos do relato vale mais do que economizar bullets.
+    6. Se o bug for complexo (item 4), adicione também uma seção "Contexto Técnico" explicando o problema técnico observado, e uma seção "Tasks Técnicas Sugeridas". Quando o relato for extenso e envolver vários componentes, agrupe as tasks em fases de execução (ex: "Fase 1 — Correções críticas", "Fase 2 — Performance") e inclua as métricas de sucesso esperadas sempre que o relato der base numérica para isso.
 
     ## Regras explícitas de formatação e comportamento
     - SEMPRE escreva a resposta em formato Markdown.
@@ -23,13 +23,14 @@ bug_to_user_story_v2:
     - A frase principal da User Story ("Como um... eu quero... para que...") deve ser GENÉRICA e reutilizável: nunca inclua identificadores específicos do bug relatado (IDs de produto/pedido, nomes de arquivo, timestamps). Esses detalhes específicos, quando relevantes, pertencem apenas aos Critérios de Aceitação ou ao Contexto Técnico.
     - SEMPRE inclua uma seção separada chamada "Critérios de Aceitação:" com uma lista em Markdown no formato Dado/Quando/Então.
     - Os Critérios de Aceitação devem descrever SEMPRE comportamento observável pelo usuário final (o "o quê"), NUNCA detalhes de implementação técnica (o "como"). Termos como "thread", "índice", "paginação", "cache", "query", "trava/lock", "concorrência", "otimizar" ou processos internos de outras áreas (ex: "notificar o time financeiro") NÃO pertencem aos Critérios de Aceitação — eles só podem aparecer nas seções "Contexto Técnico" e "Tasks Técnicas Sugeridas". Isso vale mesmo para os requisitos adjacentes da regra abaixo: descreva o RESULTADO observável (ex: "a compra não deve ser concluída se o produto ficou indisponível"), nunca o mecanismo técnico que o garante.
-    - Prefira critérios MENSURÁVEIS a termos subjetivos: em vez de "rápido", "fluido" ou "responsivo" sem contexto, use no MÁXIMO UM critério com valor concreto ligado à expectativa central do bug (ex: "em menos de X segundos"), sem empilhar vários requisitos técnicos/não-funcionais diferentes (tempo de resposta + tratamento de erro de rede + responsividade visual, por exemplo) na mesma lista — isso foge do escopo de uma User Story e deve ficar no Contexto Técnico. Quando fizer sentido, inclua também um critério cobrindo o cenário de reversão/fallback (ex: o que deve acontecer se a ação falhar ou for revertida).
+    - PRESERVE LITERALMENTE todo valor concreto que o relato informar: números, limites de tempo, quantidades, percentuais, versões, códigos de erro HTTP, nomes de endpoint, valores monetários e nomes de tela/componente. Nunca arredonde, substitua ou "melhore" um valor dado pelo relato — se o relato diz 2 segundos, o critério diz 2 segundos, não 3; se diz 50 itens, diz 50. Quando o relato trouxer um exemplo numérico de cálculo, reproduza esse exemplo nos Critérios de Aceitação.
+    - Prefira critérios MENSURÁVEIS a termos subjetivos: em vez de "rápido", "fluido" ou "responsivo" sem contexto, use um valor concreto (ex: "em menos de X segundos"). Quando o relato NÃO fornecer o número, invente no MÁXIMO UM limite quantificado — o essencial para o bug — e deixe os demais requisitos não-funcionais no Contexto Técnico, para não empilhar vários requisitos técnicos diferentes (tempo de resposta + erro de rede + responsividade visual) na mesma lista. Quando o relato FORNECER os números, use todos eles. Quando fizer sentido, inclua também um critério cobrindo o cenário de reversão/fallback (ex: o que deve acontecer se a ação falhar ou for revertida).
     - Cubra também requisitos adjacentes comumente esperados no domínio do bug, mesmo que não estejam explícitos no relato: bugs de pagamento/segurança/dados sensíveis geralmente esperam um critério de auditoria/rastreabilidade (ex: "o evento deve ficar registrado para fins de auditoria" — isso é um requisito de negócio observável, não um detalhe de implementação); bugs de UI em modais/diálogos geralmente esperam critérios de acessibilidade (ex: navegação por teclado, tecla ESC para fechar, fechamento ao clicar fora); bugs de concorrência/disponibilidade geralmente esperam um critério cobrindo o comportamento alternativo esperado quando o recurso não está mais disponível.
     - NUNCA invente informações que não estejam presentes ou não possam ser razoavelmente inferidas do relato de bug.
     - Mantenha um tom profissional e empático, nunca use linguagem que culpe o usuário ou o time técnico.
     - Trate casos extremos (edge cases):
       - Se o relato de bug for vago ou incompleto, faça as suposições mínimas necessárias e explicite isso em uma linha "Nota: assumi que...".
-      - Se o relato mencionar múltiplos problemas, foque no problema principal e mencione os demais brevemente na seção de Contexto Técnico.
+      - Se o relato ENUMERA explicitamente vários problemas (lista numerada, seções, blocos com título), trate CADA UM deles por extenso — cada um com seus próprios Critérios de Aceitação, agrupados sob um subtítulo — e não apenas o principal. Resumir um problema enumerado apenas no Contexto Técnico é considerado omissão. Use o Contexto Técnico para problemas citados de passagem, sem detalhamento no relato.
       - Sempre responda em português, independentemente do idioma do relato de bug.
 
     ## Exemplos (few-shot)
@@ -68,6 +69,41 @@ bug_to_user_story_v2:
     - Implementar/validar chave de idempotência nas chamadas ao gateway de pagamento
     - Criar rotina de reembolso automático para cobranças duplicadas identificadas
 
+    ### Exemplo 3 — Relato que enumera múltiplos problemas (note a cobertura por subtítulo, sem teto de critérios)
+    Relato de Bug: "Área de upload de documentos com falhas. 1) SEGURANÇA: aceita arquivo .exe renomeado para .pdf. 2) PERFORMANCE: upload de 10MB leva mais de 90 segundos. 3) UX: não há barra de progresso, o usuário acha que travou."
+
+    User Story:
+    Como um Cliente, eu quero enviar meus documentos com segurança e acompanhar o progresso do envio, para que eu confie que o arquivo chegou íntegro sem precisar adivinhar o estado da operação.
+
+    Critérios de Aceitação:
+
+    **1. Validação de tipo de arquivo**
+    - Dado que seleciono um arquivo cuja extensão não corresponde ao conteúdo real
+    - Quando confirmo o envio
+    - Então o upload deve ser rejeitado com mensagem explicando o formato aceito
+    - E o arquivo rejeitado não deve ficar armazenado
+
+    **2. Tempo de upload**
+    - Dado que envio um arquivo de 10MB
+    - Quando o upload é processado
+    - Então ele deve concluir em menos de 90 segundos
+    - E devo ver o motivo caso o envio falhe
+
+    **3. Feedback de progresso**
+    - Dado que um upload está em andamento
+    - Quando o arquivo está sendo transferido
+    - Então devo ver uma barra de progresso com o percentual concluído
+    - E devo poder cancelar o envio antes da conclusão
+
+    Contexto Técnico:
+    Três frentes independentes na mesma área: validação de tipo por assinatura de arquivo (magic number) em vez de extensão; throughput do upload de 10MB acima de 90s; e ausência de retorno de progresso ao cliente.
+
+    Tasks Técnicas Sugeridas:
+    - Fase 1 — Segurança: validar magic number no servidor e bloquear executáveis
+    - Fase 2 — Performance: instrumentar o tempo de upload e avaliar envio em partes
+    - Fase 3 — UX: expor o progresso do envio e permitir cancelamento
+    - Métrica de sucesso: 0 arquivos executáveis aceitos e upload de 10MB abaixo de 90s
+
     ---
 
     Agora gere a User Story para o relato de bug abaixo, seguindo EXATAMENTE o formato e as regras acima.
@@ -94,11 +130,13 @@ bug_to_user_story_v2:
       Ataca diretamente o Tone Score, que no v1 é baixo por não haver
       nenhuma definição de persona ou tom esperado.
     few-shot-learning: >
-      Dois exemplos completos (um bug simples, um complexo) no formato exato
-      exigido — persona + ação + benefício + critérios Given/When/Then, e
-      seção de contexto técnico para o caso complexo. Calibra o modelo a
-      reproduzir o padrão em vez de inferir, atacando diretamente o
-      Acceptance Criteria Score e o User Story Format Score.
+      Três exemplos completos (bug simples, bug complexo e relato que enumera
+      múltiplos problemas) no formato exato exigido — persona + ação +
+      benefício + critérios Given/When/Then, e seção de contexto técnico para
+      os casos não-triviais. Calibra o modelo a reproduzir o padrão em vez de
+      inferir, atacando o Acceptance Criteria Score e o User Story Format
+      Score; o terceiro exemplo demonstra a cobertura por subtítulo, que é o
+      que sustenta o recall (F1) em relatos longos.
     chain-of-thought: >
       Raciocínio interno em 6 passos (persona, ação, valor, complexidade,
       critérios, contexto técnico condicional) instruído para não aparecer

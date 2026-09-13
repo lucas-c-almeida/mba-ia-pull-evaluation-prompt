@@ -21,7 +21,7 @@ contra 15 exemplos com 5 métricas LLM-as-judge.
 | 1 | Pull do prompt v1 do LangSmith → `prompts/bug_to_user_story_v1.yml` | ✅ `src/pull_prompts.py` |
 | 2 | Prompt v2 otimizado com ≥ 2 técnicas | ✅ 3 técnicas (Role Prompting, Few-shot, CoT) |
 | 3 | Push público para `{username}/bug_to_user_story_v2` com metadados | ✅ `src/push_prompts.py` |
-| 4 | Iteração até **todas** as 5 métricas ≥ 0.9 | ⚠️ 4 de 5 métricas aprovadas com folga; **F1-Score é o único bloqueio** (0.8830) — ver [ressalva](#ressalva-importante-sobre-o-critério-de-aprovação) |
+| 4 | Iteração até **todas** as 5 métricas ≥ 0.9 | ✅ atingido na iteração 7 (média **0.9551**), com ressalva de margem no F1 — ver [ressalva](#ressalva-importante-sobre-a-margem-do-f1-score) |
 | 5 | 6 testes de validação em `tests/test_prompts.py` | ✅ 6/6 passando |
 | — | Evidências públicas no LangSmith (dataset, runs v1 e v2, traces) | ✅ ver [Evidências](#evidências-no-langsmith) |
 
@@ -34,7 +34,7 @@ O prompt otimizado está em [`prompts/bug_to_user_story_v2.yml`](prompts/bug_to_
 | Técnica | Por que foi escolhida | Como foi aplicada | Métrica que mais beneficia |
 |---|---|---|---|
 | **Role Prompting** | O prompt v1 não define nenhuma persona, o que resulta em tom genérico/neutro. Fixar uma persona de PM sênior empático puxa diretamente o tom das respostas. | `system_prompt` abre com: *"Você é um Product Manager (PM) sênior, especialista em metodologias ágeis (Scrum/Kanban), com grande empatia pelo usuário final e foco constante em valor de negócio."* | Tone Score |
-| **Few-shot Learning** | Instruções descritivas sozinhas não garantem que o modelo reproduza o formato exato exigido (User Story + Critérios de Aceitação em Given/When/Then). Exemplos completos calibram o modelo a copiar o padrão. | 2 exemplos completos e inventados (não retirados do dataset de avaliação, para evitar viés): um bug simples (link de recuperação de senha) e um bug complexo (cobrança duplicada), cada um com User Story + Critérios de Aceitação; o complexo também demonstra as seções extras de "Contexto Técnico" e "Tasks Técnicas Sugeridas". | Acceptance Criteria Score, User Story Format Score |
+| **Few-shot Learning** | Instruções descritivas sozinhas não garantem que o modelo reproduza o formato exato exigido (User Story + Critérios de Aceitação em Given/When/Then). Exemplos completos calibram o modelo a copiar o padrão. | 3 exemplos completos e inventados (não retirados do dataset de avaliação, para evitar viés): um bug simples (link de recuperação de senha), um bug complexo (cobrança duplicada) e um relato que enumera múltiplos problemas (upload de documentos), cada um com User Story + Critérios de Aceitação; o complexo demonstra as seções extras de "Contexto Técnico" e "Tasks Técnicas Sugeridas", e o terceiro demonstra a cobertura por subtítulo que sustenta o recall. | Acceptance Criteria Score, User Story Format Score |
 | **Chain of Thought (CoT)** | Bugs simples e complexos exigem tratamento diferente (um bug de cobrança duplicada com múltiplas reclamações precisa de mais contexto técnico do que um botão que não responde). Um raciocínio em etapas guia o modelo a decidir isso antes de escrever a resposta final. | Bloco "Seu processo de raciocínio" com 6 passos (persona → ação → valor → avaliação de complexidade → critérios de aceitação → contexto técnico condicional), com instrução explícita para não expor os passos, apenas o resultado final. | Completeness Score |
 
 Justificativas completas também ficam versionadas em `techniques_applied` / `techniques_justification` dentro do próprio `prompts/bug_to_user_story_v2.yml`.
@@ -45,13 +45,13 @@ Justificativas completas também ficam versionadas em `techniques_applied` / `te
 |---|---|
 | Instruções claras e específicas | Bloco "Regras explícitas de formatação e comportamento" |
 | Regras explícitas de comportamento | Mesmo bloco (tom, persona-rótulo, proibição de inventar informação) |
-| Exemplos de entrada/saída (Few-shot) | Bloco "Exemplos (few-shot)" — Exemplo 1 (simples) e Exemplo 2 (complexo) |
+| Exemplos de entrada/saída (Few-shot) | Bloco "Exemplos (few-shot)" — Exemplo 1 (simples), Exemplo 2 (complexo) e Exemplo 3 (múltiplos problemas enumerados) |
 | Tratamento de edge cases | Sub-bloco "Trate casos extremos": relato vago, múltiplos problemas, idioma |
 | System vs User Prompt adequados | `system_prompt` = persona + regras + exemplos; `user_prompt` = apenas o `{bug_report}` delimitado |
 
 ### Ajustes feitos durante a iteração
 
-O processo de iteração revelou problemas específicos que as 3 técnicas isoladas não resolviam sozinhas. Foram 6 rodadas de push + avaliação no total — as 3 primeiras contra `gemini-3.5-flash-lite` (até aprovar todas as 5 métricas), e mais 3 contra `gemini-3.1-flash-lite` depois que o `gemini-3.5-flash-lite` esgotou a cota diária gratuita (ver nota abaixo):
+O processo de iteração revelou problemas específicos que as 3 técnicas isoladas não resolviam sozinhas. Foram 7 rodadas de push + avaliação no total — as 3 primeiras contra `gemini-3.5-flash-lite`, mais 3 contra `gemini-3.1-flash-lite` durante o esgotamento da cota diária gratuita, e a 7ª com o juiz `gemini-3.5-flash` (ver nota abaixo):
 
 1. **Vazamento de detalhes técnicos nos Critérios de Aceitação** — o juiz de `User Story Format Score` penalizava a separação de seções quando termos de implementação (ex: "thread", "índice", "notificar o time financeiro") apareciam dentro dos Critérios de Aceitação em vez de ficarem exclusivamente em "Contexto Técnico"/"Tasks Técnicas". Foi adicionada uma regra explícita proibindo esse vazamento.
 2. **Critérios subjetivos demais** — o `Acceptance Criteria Score` penalizava termos como "rápido"/"fluido" sem um valor mensurável associado (a referência do dataset usa limites concretos como "em menos de 2 segundos"). Foi adicionada uma regra explícita pedindo critérios mensuráveis.
@@ -59,6 +59,7 @@ O processo de iteração revelou problemas específicos que as 3 técnicas isola
 4. **Persona errada em bugs de sistema/segurança** — para bugs de integração (webhook, permissão) o juiz esperava uma persona de sistema/negócio, ou (em bugs de segurança) a persona de quem é protegido pela correção, não de quem a executa tecnicamente. Regra explícita adicionada.
 5. **Identificadores específicos na frase principal** — a User Story não deve citar IDs/dados específicos do bug relatado na frase "Como um... eu quero... para que..."; isso deve ficar nos Critérios/Contexto Técnico.
 6. **Critérios técnicos/não-funcionais empilhados** — mais de um requisito técnico (tempo de resposta + erro de rede + responsividade) na mesma lista de critérios foi visto como fuga de escopo; a regra de mensurabilidade foi limitada a no máximo um critério quantificado por vez.
+7. **Recall baixo nos relatos longos** — com o juiz `gemini-3.5-flash`, a análise por exemplo mostrou precisão quase perfeita (0.90-1.00) e todo o déficit de F1 concentrado em recall nos 4 bugs de relato longo. Foram removidos o teto de "3 a 7 critérios" e a regra de focar só no problema principal, adicionada a regra de preservar literalmente os números do relato, e incluído um terceiro exemplo few-shot com cobertura por subtítulo. Ver [Execução D](#execução-d--iteração-7-aprovado).
 
 ---
 
@@ -114,11 +115,10 @@ criterioso no F1, que caiu para 0.8830. O resultado líquido é melhor: a média
 para 0.9443 e restou **um único bloqueio, com causa identificada** — não mais duas
 métricas oscilando por ruído.
 
-### Ressalva importante sobre o critério de aprovação
+### Diagnóstico que originou a iteração 7
 
-O critério de `instrucoes.md` é **todas as 5 métricas ≥ 0.9**. Quatro delas passam
-com folga na execução C. O **F1-Score (0.8830) é o único bloqueio**, e a análise
-por exemplo mostra que não é ruído:
+Após a execução C, o **F1-Score (0.8830) era o único bloqueio**, e a análise
+por exemplo mostrou que não era ruído:
 
 | Exemplo (complexidade) | F1 | Precision | Recall |
 |---|---|---|---|
@@ -148,9 +148,68 @@ relato** (o juiz aponta *"alterou o tempo limite de 2 para 3 segundos"*, *"de <3
 para <10s"*, *"não especificou o limite de 20 itens"*), o que custa recall em vários
 exemplos medianos.
 
-Ou seja: o caminho para fechar o F1 é escalar o número de critérios com a
+Ou seja: o caminho para fechar o F1 era escalar o número de critérios com a
 complexidade do relato, cobrir todos os subproblemas enumerados e preservar
 literalmente os números do relato — não mais ajuste fino de tom ou formato.
+
+### Execução D — iteração 7 (APROVADO)
+
+A iteração 7 aplicou exatamente as três correções do diagnóstico acima, mais um
+terceiro exemplo few-shot demonstrando a estrutura por subtítulo:
+
+1. Removido o teto de "3 a 7 critérios de aceitação" — relatos que enumeram
+   problemas cobrem **cada um sob subtítulo próprio**, sem limite.
+2. Invertida a regra de edge case: relatos com problemas enumerados passam a
+   tratar **cada um por extenso**, em vez de focar só no principal.
+3. Nova regra: **preservar literalmente** os valores numéricos do relato
+   (tempos, quantidades, códigos HTTP, valores monetários), sem arredondar.
+4. Novo **Exemplo 3** few-shot: relato com 3 problemas enumerados, com Critérios
+   de Aceitação agrupados por subtítulo e Tasks Técnicas divididas em fases.
+
+| Métrica | exec. C (iter. 6) | **exec. D (iter. 7)** | Δ |
+|---|---|---|---|
+| F1-Score | 0.8830 ✗ | **0.9029 ✓** | +0.020 |
+| Tone Score | 0.9820 ✓ | **0.9673 ✓** | −0.015 |
+| Acceptance Criteria Score | 0.9260 ✓ | **0.9453 ✓** | +0.019 |
+| User Story Format Score | 0.9960 ✓ | **0.9773 ✓** | −0.019 |
+| Completeness Score | 0.9347 ✓ | **0.9827 ✓** | +0.048 |
+| **Média geral** | 0.9443 | **0.9551** | +0.011 |
+| **Status** | ❌ FALHOU (F1) | ✅ **APROVADO (todas ≥ 0.9)** | |
+
+Experiment: `lucas-almeida-bug_to_user_story_v2-fcb9a24c` · commit do prompt no Hub: `32eba1b8`
+
+Os bugs de relato longo — a causa diagnosticada — melhoraram como esperado:
+
+| Exemplo | F1 exec. C | F1 exec. D |
+|---|---|---|
+| App offline-first / sincronização | 0.5185 | **0.7816** (+0.26) |
+| Pipeline de vendas com desconto | 0.7548 | **0.8471** (+0.09) |
+| Checkout com múltiplas falhas | 0.8686 | **0.9474** (+0.08) |
+| Relatórios gerenciais / performance | 0.8382 | 0.8382 (=) |
+
+O Completeness Score subiu de 0.9347 para 0.9827 — efeito direto da cobertura por
+subtítulo e das tasks agrupadas em fases.
+
+### Ressalva importante sobre a margem do F1-Score
+
+O critério de `instrucoes.md` (**todas as 5 métricas ≥ 0.9**) está atingido na
+execução D, mas com uma ressalva que vale registrar: **o F1-Score fechou em 0.9029,
+uma margem de 0.0029 sobre o piso** — cerca de 0,3%.
+
+Nas execuções A, B e C o F1 oscilou entre 0.8830 e 0.90 **sem nenhuma alteração no
+prompt**, porque o avaliador é um LLM-as-judge sem determinismo garantido pelo
+provider. Uma nova rodada pode, portanto, cair abaixo de 0.9 novamente.
+
+O ganho também não foi uniforme: quatro exemplos que iam bem pioraram (botão do
+carrinho 1.0000 → 0.9189; imagens no Safari 0.9744 → 0.8972; relatório de vendas
+0.9243 → 0.8686; dashboard 0.9243 → 0.8743). A cobertura expandida ajuda os relatos
+longos, mas custa precisão nos relatos curtos, cuja referência é enxuta — parte do
+ganho nos complexos foi paga pelos simples.
+
+**Próximo passo natural (não executado):** amarrar a regra de cobertura ao
+julgamento de complexidade que o CoT já faz no passo 4, para que os bugs simples
+voltem ao patamar de 0.92–1.00 e o F1 ganhe margem real em vez de depender da
+rodada.
 
 ### Histórico das iterações 4-6 (`gemini-3.1-flash-lite`, durante o esgotamento de cota do modelo oficial)
 
@@ -174,7 +233,7 @@ Tone, Acceptance Criteria e Completeness ficaram consistentemente ≥ 0.9; F1 e 
 |---|---|---|
 | Dataset de avaliação com ≥ 15 exemplos | Aba **Examples** do link público — dataset `full-cycle-mba-challenge-eval`, carregado de `datasets/bug_to_user_story.jsonl` | ✅ 15 exemplos |
 | Execuções do prompt v1 (ruim) com notas baixas | Aba **Experiments** → `leonanluppi-bug_to_user_story_v1-fe6a7ebc` | ✅ média 0.8733 (4 de 5 métricas < 0.9) |
-| Execuções do prompt v2 (otimizado) com notas ≥ 0.9 | Aba **Experiments** → `lucas-almeida-bug_to_user_story_v2-4e814d5a` (Execução A) | ✅ todas as 5 métricas ≥ 0.9, média 0.9195 |
+| Execuções do prompt v2 (otimizado) com notas ≥ 0.9 | Aba **Experiments** → `lucas-almeida-bug_to_user_story_v2-fcb9a24c` (Execução D, iter. 7) | ✅ todas as 5 métricas ≥ 0.9, média 0.9551 |
 | Tracing detalhado de pelo menos 3 exemplos | Clique em qualquer linha de um Experiment para abrir o trace completo | ✅ 15 execuções rastreadas por Experiment, cada uma com o trace da chamada de geração + os 5 feedbacks (score + comentário do juiz) |
 
 Links diretos para cada Experiment (mesmo token público):
@@ -304,7 +363,7 @@ para `score: 0.0` em vez de propagar.
 
 ## Limitações conhecidas
 
-1. **F1-Score abaixo do critério.** 0.8830 na melhor configuração. Causa diagnosticada (déficit de recall nos 4 bugs de relato longo) e caminho de correção descrito na [ressalva](#ressalva-importante-sobre-o-critério-de-aprovação).
+1. **Margem apertada no F1-Score.** O critério está atingido (0.9029), mas com apenas 0.0029 de folga; o F1 já oscilou entre 0.8830 e 0.90 entre rodadas sem mudança no prompt. Ver [ressalva](#ressalva-importante-sobre-a-margem-do-f1-score).
 2. **Modelo diferente do recomendado no enunciado.** O enunciado indica `gemini-2.5-flash`; esta conta do Google AI Studio recebe `404 — This model models/gemini-2.5-flash is no longer available to new users` ao tentar usá-lo (verificado). O respondente é `gemini-3.5-flash-lite` e o juiz recomendado é `gemini-3.5-flash` (execução C). `gemini-3.6-flash` também está disponível nesta conta.
 3. **`.env` usa o mesmo modelo para responder e julgar.** A execução C mostrou que separar os papéis (`EVAL_MODEL=gemini-3.5-flash`) melhora 4 das 5 métricas. Vale fixar isso no `.env` em vez de passar por variável de ambiente a cada rodada.
 4. **Custo de tempo da avaliação.** Com juiz `gemini-3.5-flash`, uma rodada de 15 exemplos leva ~10 min (~39s por exemplo), contra ~2 min com o `flash-lite`.
